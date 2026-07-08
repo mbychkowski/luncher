@@ -27,15 +27,18 @@ source .env
 # Terraform directory
 TF_DIR=$(pwd)/terraform
 
-echo "Checking Terraform remote state bucket: gs://bkt-tfstate-${GCP_PROJECT_ID}..."
+# Bucket name: bkt-tf-state-<project-id>-<repo-name>
+BUCKET_NAME="bkt-tf-state-${GCP_PROJECT_ID}-${GITHUB_REPO}"
+
+echo "Checking Terraform remote state bucket: gs://${BUCKET_NAME}..."
 
 # First check if the TF state bucket already exists
-if gcloud storage buckets describe "gs://bkt-tfstate-${GCP_PROJECT_ID}" --project="${GCP_PROJECT_ID}" >/dev/null 2>&1; then
+if gcloud storage buckets describe "gs://${BUCKET_NAME}" --project="${GCP_PROJECT_ID}" >/dev/null 2>&1; then
   printf "Terraform remote state bucket found, continuing...\n"
 else
   # Create Google Cloud Storage bucket for Terraform Remote State
-  echo "Creating Terraform remote state bucket gs://bkt-tfstate-${GCP_PROJECT_ID}..."
-  gcloud storage buckets create "gs://bkt-tfstate-${GCP_PROJECT_ID}" \
+  echo "Creating Terraform remote state bucket gs://${BUCKET_NAME}..."
+  gcloud storage buckets create "gs://${BUCKET_NAME}" \
     --project="${GCP_PROJECT_ID}" \
     --location="${GCP_LOCATION}" \
     --public-access-prevention \
@@ -43,7 +46,7 @@ else
   
   # Enable versioning on the state bucket
   echo "Enabling versioning on state bucket..."
-  gcloud storage buckets update "gs://bkt-tfstate-${GCP_PROJECT_ID}" --versioning
+  gcloud storage buckets update "gs://${BUCKET_NAME}" --versioning
 fi
 
 # Set up tfvars file

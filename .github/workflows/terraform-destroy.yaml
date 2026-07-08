@@ -51,7 +51,7 @@ jobs:
         id: init
         run: |
           terraform init \
-            -backend-config="bucket=bkt-tfstate-${{ env.GCP_PROJECT_ID }}"
+            -backend-config="bucket=bkt-tf-state-${{ env.GCP_PROJECT_ID }}-${{ github.event.repository.name }}"
 
       - name: Terraform Destroy
         id: destroy

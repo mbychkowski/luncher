@@ -52,12 +52,19 @@ else
       --display-name="GitHub Actions Pool"
 fi
 
-# 3. Create the Workload Identity Provider
+# 3. Create or update the Workload Identity Provider
 if gcloud iam workload-identity-pools providers describe "${PROVIDER_NAME}" \
     --project="${GCP_PROJECT_ID}" \
     --location="global" \
     --workload-identity-pool="${POOL_NAME}" >/dev/null 2>&1; then
-    echo "Workload Identity Provider '${PROVIDER_NAME}' already exists."
+    echo "Workload Identity Provider '${PROVIDER_NAME}' already exists. Updating its configuration..."
+    gcloud iam workload-identity-pools providers update-oidc "${PROVIDER_NAME}" \
+      --project="${GCP_PROJECT_ID}" \
+      --location="global" \
+      --workload-identity-pool="${POOL_NAME}" \
+      --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository,attribute.repository_owner=assertion.repository_owner" \
+      --attribute-condition="assertion.repository_owner == '${GITHUB_ORG}'" \
+      --issuer-uri="https://token.actions.githubusercontent.com"
 else
     echo "Creating Workload Identity Provider '${PROVIDER_NAME}'..."
     gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_NAME}" \

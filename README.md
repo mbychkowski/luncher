@@ -1,8 +1,4 @@
-# 🚀 Luncher: Cloud Run GHA & Terraform Deployment Blueprint
-
-Welcome to **Luncher**! This repository is a premium, fully-featured, production-ready blueprint for implementing high-quality CI/CD pipelines to Google Cloud (GCP) using **GitHub Actions**, **Terraform**, **Workload Identity**, **Cloud Build**, and **Google Cloud Run**.
-
-Designed specifically for **forkable deployments**, this template empowers developers or different organizations to fork this codebase, inject their own credentials, and seamlessly spin up their own secure environments in Google Cloud with **all resource lifecycle management handled fully by Terraform**.
+# 🍔 Luncher
 
 ---
 

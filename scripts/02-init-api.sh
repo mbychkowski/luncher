@@ -28,6 +28,7 @@ echo "Enabling Google Cloud APIs for project ${GCP_PROJECT_ID}..."
 
 # Enable APIs needed for CI/CD, Container Building, Artifact Registry, and Cloud Run
 for GOOGLE_CLOUD_API in \
+  compute.googleapis.com \
   artifactregistry.googleapis.com \
   cloudbuild.googleapis.com \
   cloudresourcemanager.googleapis.com \
@@ -42,3 +43,7 @@ for GOOGLE_CLOUD_API in \
 done
 
 echo "Google Cloud APIs successfully enabled."
+
+gcloud config set compute/region "${GCP_LOCATION}" >/dev/null 2>&1
+
+echo "Google Cloud default region set to ${GCP_LOCATION}"

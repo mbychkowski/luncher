@@ -65,7 +65,6 @@ if [ -z "$GCP_PROJECT_ID" ]; then
 fi
 
 gcloud config set project "${GCP_PROJECT_ID}" >/dev/null 2>&1
-gcloud config set compute/region "${GCP_LOCATION}" >/dev/null 2>&1
 
 if [ "$GH_AVAILABLE" = true ] && [ -n "$GITHUB_ORG" ] && [ -n "$GITHUB_REPO" ]; then
   gh repo set-default "${GITHUB_ORG}/${GITHUB_REPO}" >/dev/null 2>&1 || true

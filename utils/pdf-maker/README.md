@@ -1,0 +1,45 @@
+# 🏢 GeniCo PDF Corpus Maker
+
+This utility generates a high-quality, professional corporate document corpus (PDF format) for the fictional company **GeniCo** using **Gemini 2.5 Flash** and **ReportLab**.
+
+## 🚀 Setup & Execution
+
+1. **Configure Authentication**. The utility supports two methods:
+
+   * **Option A: Standard Gemini API Key** (Add to the `.env` file in the project root):
+     ```env
+     GEMINI_API_KEY="your_api_key_here"
+     ```
+   * **Option B: Google Cloud Application Default Credentials (ADC)** (Add GCP variables to `.env` and authenticate your terminal):
+     ```env
+     GCP_PROJECT_ID="your_gcp_project_id"
+     GCP_LOCATION="us-central1"
+     ```
+     Ensure you are authenticated:
+     ```bash
+     gcloud auth application-default login
+     ```
+
+2. **Run the orchestrator** (which automatically boots up any missing package dependencies):
+   ```bash
+   ./run.py
+   ```
+
+## 🛠️ Advanced Usage
+
+The generation is split into two steps: creating a manifest blueprint of 15 documents, and then compiling those documents with inline charts and structured copy.
+
+- **Only generate the JSON blueprint**:
+  ```bash
+  ./run.py --manifest-only
+  ```
+- **Only compile PDFs using an existing blueprint**:
+  ```bash
+  ./run.py --pdfs-only
+  ```
+- **Force regenerate blueprint and compile PDFs**:
+  ```bash
+  ./run.py --force-new-manifest
+  ```
+
+Generated PDFs are saved inside `assets/docs/`.

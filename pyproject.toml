@@ -1,0 +1,17 @@
+[project]
+name = "luncher-agents"
+version = "0.1.0"
+description = "Luncher Agents and A2A services"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "google-adk[a2a]>=2.0.0",
+    "uvicorn",
+    "pypdf",
+    "google-cloud-storage",
+    "python-dotenv",
+]
+
+[tool.uv]
+package = false
+

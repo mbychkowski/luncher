@@ -1,0 +1,5 @@
+google-adk[a2a]
+uvicorn
+pypdf
+google-cloud-storage
+python-dotenv

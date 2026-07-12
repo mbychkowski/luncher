@@ -1,0 +1,5 @@
+name: luncher-agents
+agent_directory: .
+create_params:
+  deployment_target: none
+  session_type: in_memory

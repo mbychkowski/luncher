@@ -37,6 +37,7 @@ for GOOGLE_CLOUD_API in \
   servicecontrol.googleapis.com \
   serviceusage.googleapis.com \
   storage.googleapis.com \
+  aiplatform.googleapis.com \
     ; do
   echo "Enabling ${GOOGLE_CLOUD_API}..."
   gcloud services enable --project "${GCP_PROJECT_ID}" "${GOOGLE_CLOUD_API}"

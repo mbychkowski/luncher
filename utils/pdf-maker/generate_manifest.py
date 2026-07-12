@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+# /// script
+# dependencies = [
+#   "google-genai",
+#   "pydantic",
+#   "python-dotenv",
+# ]
+# ///
 """
 GeniCo Document Corpus Generator - Step 1: Manifest Generator
 This script uses Gemini 2.5 Flash to brainstorm and structure a comprehensive

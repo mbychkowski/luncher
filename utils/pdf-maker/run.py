@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# /// script
+# dependencies = [
+#   "google-genai",
+#   "reportlab",
+#   "matplotlib",
+#   "python-dotenv",
+# ]
+# ///
 """
 GeniCo Document Corpus Generator - Unified Orchestrator Wrapper
 This script handles dependency validation, environment setup, and sequential execution
@@ -7,6 +15,7 @@ of the manifest generation and PDF compilation.
 
 import os
 import sys
+import shutil
 import subprocess
 import argparse
 from pathlib import Path
@@ -25,15 +34,21 @@ REQUIRED_PACKAGES = {
 }
 
 def install_dependencies():
-    """Attempt to install required packages via pip."""
+    """Attempt to install required packages via uv or pip."""
     print("📦 Installing missing dependencies from requirements.txt...")
     req_file = CURRENT_DIR / "requirements.txt"
+    has_uv = shutil.which("uv") is not None
     try:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", str(req_file)])
+        if has_uv:
+            print("⚡ 'uv' detected! Installing dependencies with uv for maximum speed...")
+            subprocess.check_call(["uv", "pip", "install", "-r", str(req_file)])
+        else:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", str(req_file)])
         print("✅ Dependencies successfully installed!\n")
     except subprocess.CalledProcessError as e:
         print(f"❌ Failed to install dependencies. Please run 'pip install -r requirements.txt' manually. Error: {e}")
         sys.exit(1)
+
 
 def check_and_bootstrap_dependencies():
     """Check if all required packages are present, and install them if missing."""

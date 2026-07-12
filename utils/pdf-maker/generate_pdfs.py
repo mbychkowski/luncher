@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# /// script
+# dependencies = [
+#   "google-genai",
+#   "reportlab",
+#   "matplotlib",
+#   "python-dotenv",
+# ]
+# ///
 """
 GeniCo Document Corpus Generator - Step 2: PDF Compiler
 This script reads the generated JSON manifest, generates charts via Matplotlib,

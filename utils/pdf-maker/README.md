@@ -20,10 +20,19 @@ This utility generates a high-quality, professional corporate document corpus (P
      gcloud auth application-default login
      ```
 
-2. **Run the orchestrator** (which automatically boots up any missing package dependencies):
-   ```bash
-   ./run.py
-   ```
+2. **Run the orchestrator**:
+
+   * **Option A: Using `uv` (Recommended - Zero Installation Needed)**:
+     If you have `uv` installed, you can execute the utility directly. `uv` will automatically read the inline script metadata, set up an isolated environment, and run the script with all dependencies in seconds:
+     ```bash
+     uv run run.py
+     ```
+   
+   * **Option B: Using standard Python**:
+     The script will automatically detect if `uv` is available on your system to install missing packages ultra-fast, or fall back to standard `pip` if not:
+     ```bash
+     ./run.py
+     ```
 
 ## 🛠️ Advanced Usage
 

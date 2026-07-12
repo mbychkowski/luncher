@@ -1,4 +1,9 @@
+from dotenv import load_dotenv
 from google.adk.agents import Agent
+
+# Load environment variables (searches up to finding .env at repo root)
+load_dotenv()
+
 
 def get_recommended_lunches() -> list[dict]:
     """Returns the list of recommended team lunch restaurants with their cuisine and ratings."""

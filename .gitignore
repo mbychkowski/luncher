@@ -39,3 +39,8 @@ share/python-wheels/
 # OS Files
 .DS_Store
 Thumbs.db
+
+# ADK (Agent Development Kit) Local Storage
+.adk/
+.adk
+

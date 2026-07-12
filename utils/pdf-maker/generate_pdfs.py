@@ -19,8 +19,13 @@ import re
 import sys
 import tempfile
 import json
+import time
+import random
+import threading
+import concurrent.futures
 from pathlib import Path
 from dotenv import load_dotenv
+
 
 # Load environment variables from the root .env
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
@@ -425,11 +430,31 @@ def add_cover_page(story, doc, styles):
     story.append(PageBreak())
 
 
+# Thread-safe logging lock and progress counters
+progress_lock = threading.Lock()
+completed_sections_count = 0
+total_sections_count = 0
+
+def call_with_retry(func, *args, max_retries=3, initial_delay=1.0, **kwargs):
+    delay = initial_delay
+    for attempt in range(max_retries + 1):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            if attempt == max_retries:
+                raise e
+            sleep_time = delay * (1.5 + random.random() * 0.5)
+            with progress_lock:
+                print(f"      [Warning] API call failed. Retrying in {sleep_time:.2f}s... Error: {e}")
+            time.sleep(sleep_time)
+            delay *= 2.0
+
 # ----------------------------------------------------------------------
 # 5. Gemini 2.5 Flash Copywriter Engine
 # ----------------------------------------------------------------------
 def generate_section_content(client, doc, section, section_idx):
-    print(f"  -> Generating Section {section_idx}: {section['title']}...")
+    global completed_sections_count
+    
     prompt = f"""
     You are writing a section of a high-quality, professional corporate document for **GeniCo**, a global manufacturer of appliances and electronics.
     
@@ -455,16 +480,27 @@ def generate_section_content(client, doc, section, section_idx):
     4. Write extensively. Aim for 2-4 comprehensive, well-developed paragraphs. Do not wrap the response in a ```markdown block, just return raw markdown content.
     """
     
-    try:
+    def _api_call():
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=prompt,
             config={'temperature': 0.5}
         )
         return response.text.strip()
+        
+    try:
+        content = call_with_retry(_api_call)
     except Exception as e:
-        print(f"    [Error] Gemini generation failed: {e}")
-        return f"**System Warning:** Section content could not be dynamically generated due to connection issues. Original specifications called for: {section['prompt_instructions']}"
+        with progress_lock:
+            print(f"    [Error] Gemini generation failed after retries for section '{section['title']}': {e}")
+        content = f"**System Warning:** Section content could not be dynamically generated due to persistent rate limits or network issues. Original specifications: {section['prompt_instructions']}"
+        
+    with progress_lock:
+        completed_sections_count += 1
+        print(f"✨ [Progress] Copy generated for {completed_sections_count}/{total_sections_count} sections... ({section['title'][:30]}...)")
+        
+    return content
+
 
 
 # ----------------------------------------------------------------------
@@ -586,22 +622,57 @@ def compile_corpus():
     
     styles = create_custom_styles()
     
-    print(f"\nStarting PDF compilation of {len(documents)} corporate documents...")
+    # Let's count sections and prepare concurrent copy generation tasks
+    global total_sections_count, completed_sections_count
+    completed_sections_count = 0
+    
+    tasks = []
+    for doc in documents:
+        for s_idx, section in enumerate(doc["sections"], 1):
+            tasks.append((doc, section, s_idx))
+            
+    total_sections_count = len(tasks)
+    
+    print(f"\n🚀 Stage 1/2: Generating detailed copy for {total_sections_count} sections in parallel (ThreadPoolExecutor)...")
+    
+    # Map (doc_filename, section_title) to the generated Markdown content
+    generated_copy_cache = {}
+    
+    # Run in parallel. 12 workers provides great throughput while respecting standard rate limits.
+    max_workers = 12
+    start_time = time.time()
+    
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_task = {
+            executor.submit(generate_section_content, client, doc, section, s_idx): (doc["filename"], section["title"])
+            for doc, section, s_idx in tasks
+        }
+        
+        for future in concurrent.futures.as_completed(future_to_task):
+            doc_filename, sec_title = future_to_task[future]
+            try:
+                content = future.result()
+                generated_copy_cache[(doc_filename, sec_title)] = content
+            except Exception as e:
+                print(f"❌ Worker thread encountered exception: {e}")
+                generated_copy_cache[(doc_filename, sec_title)] = f"**Error:** Unhandled error during generation. {e}"
+
+    copy_duration = time.time() - start_time
+    print(f"\n⚡ Copy generation complete! Generated {total_sections_count} sections in {copy_duration:.2f} seconds.")
+    
+    print(f"\n🚀 Stage 2/2: Assembling and compiling PDF files on disk...")
+    assembly_start = time.time()
     
     # Create a temporary folder for matplotlib chart rendering
     with tempfile.TemporaryDirectory() as temp_dir:
         for idx, doc in enumerate(documents, 1):
-            print(f"\n======================================== ({idx}/{len(documents)}) ========================================")
-            print(f"Document: {doc['title']}")
-            print(f"Target: assets/docs/{doc['filename']}")
-            print("==========================================================================================")
+            doc_start = time.time()
             
             # 1. Render charts if defined
             charts_flowables = []
             if doc.get('charts'):
                 for c_idx, chart_cfg in enumerate(doc['charts'], 1):
                     try:
-                        print(f"  -> Generating Chart {c_idx}: {chart_cfg['title']}...")
                         chart_path = generate_chart(chart_cfg, temp_dir)
                         # Center and scale chart image in flowable (5.5in width, 2.8in height -> 396x201 points)
                         charts_flowables.append(Image(chart_path, width=396, height=201))
@@ -627,9 +698,9 @@ def compile_corpus():
                 story.append(Paragraph(doc['summary'], styles['GeniCoBody']))
                 story.append(Spacer(1, 10))
                 
-            # 3. Generate and parse text for each section
+            # 3. Retrieve text from cache and parse
             for section_idx, section in enumerate(doc['sections'], 1):
-                section_text = generate_section_content(client, doc, section, section_idx)
+                section_text = generated_copy_cache.get((doc['filename'], section['title']), "")
                 section_flowables = markdown_to_flowables(section_text, styles)
                 story.extend(section_flowables)
                 
@@ -665,11 +736,13 @@ def compile_corpus():
                 is_cover_page=use_cover
             )
             
-            print(f"  -> Assembling and rendering PDF layout...")
             doc_template.build(story, canvasmaker=canvas_class)
-            print(f"  -> Successfully generated: {pdf_path.relative_to(ROOT_DIR)}")
+            doc_duration = time.time() - doc_start
+            print(f"📄 [Success] Compiled {idx:02d}/{len(documents)}: assets/docs/{doc['filename']} in {doc_duration:.2f}s")
 
-    print("\n🎉 PDF Corpus Compilation Complete! All documents have been compiled into assets/docs/")
+    total_duration = time.time() - start_time
+    print(f"\n🎉 PDF Corpus Compilation Complete! All documents compiled in {total_duration:.2f} seconds.")
 
 if __name__ == "__main__":
     compile_corpus()
+

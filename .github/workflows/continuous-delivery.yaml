@@ -60,6 +60,7 @@ jobs:
           gcloud builds submit "./app" \
             --config ./app/cloudbuild.yaml \
             --region ${{ env.GCP_LOCATION }} \
+            --service-account=projects/${{ env.GCP_PROJECT_ID }}/serviceAccounts/${{ env.GCP_SA_GITHUB_ACTIONS }}@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
             --substitutions _LOCATION=${{ env.GCP_LOCATION }},_IMAGE_TAG=${{ steps.slug.outputs.sha7 }}
 
       - name: Setup Terraform

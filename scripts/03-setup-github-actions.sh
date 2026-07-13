@@ -92,7 +92,7 @@ GCP_WI_PROVIDER_ID="projects/${PROJECT_NUMBER}/locations/global/workloadIdentity
 
 # Update .env
 # Remove existing GCP_WI_PROVIDER_ID if any
-sed -i '/GCP_WI_PROVIDER_ID=/d' .env
+grep -v "GCP_WI_PROVIDER_ID=" .env > .env.tmp && mv .env.tmp .env
 echo "GCP_WI_PROVIDER_ID=\"${GCP_WI_PROVIDER_ID}\"" >> .env
 
 cat << EOF

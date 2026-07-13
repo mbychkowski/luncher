@@ -154,6 +154,12 @@ Once your infrastructure is ready, you can build and deploy your customized Flas
 
 ---
 
+## 🤖 Running agents locally
+From the repo root, run `uv run agents-cli playground`
+
+## 🚀 Deploying agents to Agent Runtime
+[TODO]
+
 ## 🧼 Cleanup
 
 To avoid ongoing charges, you can easily tear down all of the resources deployed in Google Cloud:

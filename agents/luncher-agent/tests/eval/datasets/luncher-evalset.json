@@ -1,0 +1,39 @@
+{
+  "eval_set_id": "luncher_workshop_evalset",
+  "name": "Luncher Workshop Evalset",
+  "description": "Systematic behavior and trajectory validation for the Luncher Coordinator Agent.",
+  "eval_cases": [
+    {
+      "eval_id": "tech_kickoff_eval",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{ "text": "Organize a Technical Kickoff for Alice, Bob, and Charlie" }] },
+          "intermediate_data": {
+            "tool_uses": [
+              { "name": "query_agenda_guidelines", "args": { "query": "Technical Kickoff" } },
+              { "name": "get_calendar_availability", "args": { "attendees": ["Alice", "Bob", "Charlie"] } },
+              { "name": "search_catering", "args": { "cuisine": "Healthy" } }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "eval_id": "marketing_sync_eval",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{ "text": "Organize a Marketing Sync for Alice and David" }] },
+          "intermediate_data": {
+            "tool_uses": [
+              { "name": "query_agenda_guidelines", "args": { "query": "Marketing Sync" } },
+              { "name": "get_calendar_availability", "args": { "attendees": ["Alice", "David"] } },
+              { "name": "search_catering", "args": { "cuisine": "Healthy" } }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+metrics_to_run:
+  - agenda_relevance
+  - dietary_compliance
+  - custom_response_quality
+
+custom_metrics:
+  - name: agenda_relevance
+    prompt_template: |
+      You are an expert corporate compliance auditor evaluating a Meeting Planning Agent.
+      Analyze the agent's proposed meeting agenda and verify if it complies with the official templates:
+      - Technical Kickoff: Exactly 90 minutes with timings (Intro: 10m, Deep Dive: 40m, Q&A: 20m, Lunch: 20m).
+      - Marketing Sync: Exactly 60 minutes with timings (Perf: 15m, Creative: 25m, Action/Lunch: 20m).
+      The agenda must cite sections of `docs/meeting_guidelines.md` (e.g., [ACME-POL-2026-LUNCH §1]).
+
+      User Prompt: {prompt}
+      Final Response: {response}
+      Full Agent Trace: {agent_data}
+
+      Provide a score out of 5:
+      - 5: Perfectly matches timing structures and provides correct citations.
+      - 3: Matches timing but is missing guidelines citations.
+      - 1: Timing structure is incorrect or fails to follow templates entirely.
+
+      Return your evaluation as a valid JSON object matching this structure:
+      {
+        "score": <integer between 1 and 5>,
+        "explanation": "<detailed string explaining the rationale for the score assigned>"
+      }
+
+  - name: dietary_compliance
+    prompt_template: |
+      You are an expert culinary auditor evaluating a Catering Agent.
+      Verify if the drafted catering menu respects the team's dietary constraints (e.g., Gluten-Free, Vegetarian, Vegan).
+      - Check if the selected menu items match the user dietary likes and sensitivities.
+      - Verify if at least one gluten-free entree is selected if any attendee is gluten-sensitive.
+
+      User Prompt: {prompt}
+      Final Response: {response}
+      Full Agent Trace: {agent_data}
+
+      Provide a score out of 5:
+      - 5: Menu perfectly respects all team dietary constraints.
+      - 3: Menu respects some constraints but lacks options for others.
+      - 1: Menu totally ignores dietary restrictions.
+
+      Return your evaluation as a valid JSON object matching this structure:
+      {
+        "score": <integer between 1 and 5>,
+        "explanation": "<detailed string explaining the rationale for the score assigned>"
+      }
+
+  - name: custom_response_quality
+    prompt_template: |
+      You are an expert quality assurance evaluator for an enterprise AI assistant.
+      Evaluate the overall quality of the agent's proposed meeting plan and catering recommendation.
+
+      User Prompt: {prompt}
+      Final Response: {response}
+      Full Agent Trace: {agent_data}
+
+      Provide a score out of 5:
+      - 5: Excellent, concise, and helpful.
+      - 3: Adequate but missing minor details.
+      - 1: Inaccurate or useless.
+
+      Return your evaluation as a valid JSON object matching this structure:
+      {
+        "score": <integer between 1 and 5>,
+        "explanation": "<detailed string explaining the rationale for the score assigned>"
+      }

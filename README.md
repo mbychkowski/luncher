@@ -1,4 +1,8 @@
-# 🍔 Luncher
+# 🍔 Luncher Workshop: Meeting & Catering Coordinator
+
+## 📋 Agent Platform SDLC Workshop Blueprint
+
+This document outlines the design, architecture, and step-by-step curriculum for a workshop demonstrating a complete Agent Software Development Life Cycle (SDLC) on Google Cloud's Agent Platform using Antigravity and the Agent Development Kit (ADK) 2.0.
 
 ---
 
@@ -161,3 +165,22 @@ To avoid ongoing charges, you can easily tear down all of the resources deployed
 1. Go to your GitHub Fork's **Actions** tab.
 2. Select the **Terraform DESTROY** workflow.
 3. Click **Run workflow** and run it to automatically delete all Artifact Registry resources, public IAM bindings, and active Cloud Run service deployments in a single step!
+
+---
+
+## 💻 Workshop Developer Workflow
+
+The project contains a standard **Makefile** to simplify local development, testing, and evaluation for workshop participants:
+
+| Command | Description |
+| :--- | :--- |
+| `make install-deps` | Installs the `google-agents-cli` tool and syncs the agent's Python dependencies |
+| `make run-backend` | Runs the mock Luncher Flask API (Catering, Calendar, and Orders) locally on port 8080 |
+| `make run-agent` | Performs a single execution check of the Agent CLI with a sample meeting prompt |
+| `make playground` | Launches the interactive ADK web playground for manual testing |
+| `make eval` | Executes systematic behavior evaluations against the mock suite |
+| `make deploy` | Deploys the completed agent project to Agent Runtime |
+| `make clean` | Removes compiled Python cache files |
+
+For detailed exercises and instructions, please refer to the agent's project README at [agents/luncher-agent/README.md](./agents/luncher-agent/README.md).
+

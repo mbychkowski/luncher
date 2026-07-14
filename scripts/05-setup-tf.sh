@@ -25,8 +25,7 @@ fi
 source .env
 
 # Terraform directory
-TF_DIR=$(pwd)/terraform
-
+TF_DIR=$(pwd)/apps/luncher-api/terraform
 # Bucket name: bkt-tf-state-<project-id>-<repo-name>
 BUCKET_NAME="bkt-tf-state-${GCP_PROJECT_ID}-${GITHUB_REPO}"
 

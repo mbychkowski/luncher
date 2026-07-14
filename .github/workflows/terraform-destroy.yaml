@@ -30,7 +30,7 @@ jobs:
       GCP_SA_GITHUB_ACTIONS: ${{ vars.GCP_SA_GITHUB_ACTIONS }}
     defaults:
       run:
-        working-directory: terraform
+        working-directory: apps/luncher-api/terraform
 
     steps:
       - name: Checkout Code

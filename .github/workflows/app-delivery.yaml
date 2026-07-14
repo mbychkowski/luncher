@@ -12,14 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Terraform Deployment
+name: App Delivery
 
 on:
-  workflow_dispatch
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/luncher-api/**'
 
 jobs:
-  terraform:
-    name: Deploy Infrastructure
+  build-and-deploy:
+    name: Build & Deploy via Terraform
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
@@ -29,9 +34,6 @@ jobs:
       GCP_LOCATION: ${{ vars.GCP_LOCATION }}
       GCP_WI_PROVIDER_ID: ${{ vars.GCP_WI_PROVIDER_ID }}
       GCP_SA_GITHUB_ACTIONS: ${{ vars.GCP_SA_GITHUB_ACTIONS }}
-    defaults:
-      run:
-        working-directory: apps/luncher-api/terraform
 
     steps:
       - name: Checkout Code
@@ -43,36 +45,44 @@ jobs:
           service_account: ${{ env.GCP_SA_GITHUB_ACTIONS }}@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com
           workload_identity_provider: ${{ env.GCP_WI_PROVIDER_ID }}
 
+      - name: Set up Cloud SDK
+        uses: 'google-github-actions/setup-gcloud@v2'
+        with:
+          version: '>= 363.0.0'
+
+      - name: Get short SHA
+        id: slug
+        run: echo "sha7=$(echo ${GITHUB_SHA} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Submit Cloud Build
+        run: |
+          gcloud builds submit "./apps/luncher-api/app" \
+            --config ./apps/luncher-api/app/cloudbuild.yaml \
+            --region ${{ env.GCP_LOCATION }} \
+            --substitutions _LOCATION=${{ env.GCP_LOCATION }},_IMAGE_TAG=${{ steps.slug.outputs.sha7 }}
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.6.3"
 
-      - name: Terraform fmt
-        id: fmt
-        run: terraform fmt -check
-        continue-on-error: true
-
       - name: Terraform Init
-        id: init
         run: |
           terraform init \
             -backend-config="bucket=bkt-tf-state-${{ env.GCP_PROJECT_ID }}-${{ github.event.repository.name }}"
+        working-directory: apps/luncher-api/terraform
 
-      - name: Terraform Validate
-        id: validate
-        run: terraform validate
-
-      - name: Terraform Plan
-        id: plan
+      - name: Terraform Apply (Deploy Service Update)
         run: |
-          terraform plan \
-            -out=out.tfplan \
+          # Use Terraform to deploy the new container image to Google Cloud Run
+          #
+          # NOTE ON SECRETS: 
+          # Because Cloud Run is managed by Terraform, any Secret Manager integration or secret-mounting is
+          # configured directly in 'terraform/main.tf'. The GitHub Action automatically applies those 
+          # configurations during this step without needing to pass sensitive keys through GitHub Action secrets!
+          terraform apply \
+            -auto-approve \
             -var "project_id=${{ env.GCP_PROJECT_ID }}" \
-            -var "region=${{ env.GCP_LOCATION }}"
-        continue-on-error: false
-
-      - name: Terraform Apply
-        id: apply
-        run: |
-          terraform apply "out.tfplan"
+            -var "region=${{ env.GCP_LOCATION }}" \
+            -var "image_url=${{ env.GCP_LOCATION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/luncher-repo/luncher:${{ steps.slug.outputs.sha7 }}"
+        working-directory: apps/luncher-api/terraform

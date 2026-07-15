@@ -64,6 +64,24 @@ resource "google_cloud_run_v2_service_iam_member" "noauth" {
   member   = "allUsers"
 }
 
+# Google Cloud Storage bucket for strategy PDF documents
+resource "google_storage_bucket" "strategy_docs" {
+  name          = "luncher-strategy-docs-${local.project.id}"
+  location      = var.region
+  project       = local.project.id
+  force_destroy = true
+
+  uniform_bucket_level_access = true
+}
+
+# Grant roles/storage.objectViewer to the AI Platform Reasoning Engine Service Agent on the bucket
+resource "google_storage_bucket_iam_member" "agent_docs_viewer" {
+  bucket = google_storage_bucket.strategy_docs.name
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:service-${local.project.number}@gcp-sa-aiplatform-re.iam.gserviceaccount.com"
+}
+
+
 # -----------------------------------------------------------------
 # OPTIONAL TEMPLATE: GOOGLE SECRET MANAGER RESOURCE DEFINITIONS
 # Uncomment the block below to automatically provision secrets in GCP

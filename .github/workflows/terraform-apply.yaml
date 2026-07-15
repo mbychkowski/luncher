@@ -76,3 +76,22 @@ jobs:
         id: apply
         run: |
           terraform apply "out.tfplan"
+
+      - name: Check for organizational docs
+        id: check_files
+        working-directory: ${{ github.workspace }}
+        run: |
+          if ls assets/docs/*.pdf 1> /dev/null 2>&1; then
+            echo "docs_exist=true" >> $GITHUB_OUTPUT
+          else
+            echo "docs_exist=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Strategy Documents
+        if: steps.check_files.outputs.docs_exist == 'true'
+        uses: 'google-github-actions/upload-cloud-storage@v2'
+        with:
+          path: 'assets/docs/'
+          glob: '*'
+          destination: 'luncher-strategy-docs-${{ env.GCP_PROJECT_ID }}'
+          parent: false

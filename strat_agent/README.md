@@ -34,30 +34,28 @@ GEMINI_API_KEY="your_gemini_api_key_here"
 
 ## 🚀 Execution & Local Testing
 
-### Standard Execution (Recommended - Zero Installation Needed)
+### Standard Execution
 
-If you have `uv` installed, you can launch the A2A server immediately. `uv` will automatically read the inline PEP 723 script metadata inside `main.py`, initialize an isolated, ephemeral environment, and run the service with all required dependencies in milliseconds:
+To start the agent's server, run `uv run` from the repository root. `uv` will automatically synchronize the workspace dependencies and run the agent service:
 
 ```bash
-uv run main.py
+uv run strat_agent/main.py
 ```
 
 ---
 
-### Alternative: Virtual Environment Setup
+### Alternative: Manual Workspace Sync
 
-If you prefer to work with a dedicated virtual environment:
+If you prefer to manually synchronize the workspace environment first:
 
-1. Create a virtual environment and install dependencies:
+1. Synchronize the workspace dependencies:
    ```bash
-   uv venv
-   source .venv/bin/activate
-   uv pip install -r requirements.txt
+   uv sync
    ```
 
 2. Run the A2A Server:
    ```bash
-   python main.py
+   uv run strat_agent/main.py
    ```
 
 The server will start up and listen on `0.0.0.0:8080` (or the configured `PORT`).

@@ -1,13 +1,3 @@
-# /// script
-# dependencies = [
-#   "google-adk[a2a]",
-#   "uvicorn",
-#   "pypdf",
-#   "google-cloud-storage",
-#   "python-dotenv",
-# ]
-# ///
-
 import os
 import io
 import uvicorn
@@ -23,10 +13,10 @@ load_dotenv()
 
 def inspect_strategy_documents() -> str:
     """Lists and extracts text from all strategy PDF documents in the corpus.
-    
+
     Dynamically switches between local directory (assets/docs) and a Google Cloud
     Storage bucket based on the presence of the 'STRATEGY_DOCS_BUCKET' env variable.
-    
+
     Returns:
         str: Concatenated text content extracted from all PDFs, or an explanation if none are found.
     """
@@ -42,10 +32,10 @@ def inspect_strategy_documents() -> str:
             # List all blobs and filter for .pdf
             blobs = list(bucket.list_blobs())
             pdf_blobs = [b for b in blobs if b.name.lower().endswith(".pdf")]
-            
+
             if not pdf_blobs:
                 return f"No PDF documents found in GCS bucket '{bucket_name}'."
-                
+
             for blob in pdf_blobs:
                 print(f"[Strategy Agent] Fetching and parsing GCS blob: '{blob.name}'...")
                 pdf_data = blob.download_as_bytes()
@@ -54,7 +44,7 @@ def inspect_strategy_documents() -> str:
                 for page in pdf_reader.pages:
                     text += page.extract_text() or ""
                 extracted_texts.append(f"--- Document (GCS): {blob.name} ---\n{text}\n")
-                
+
         except Exception as e:
             return f"Error connecting to or reading from GCS bucket '{bucket_name}': {str(e)}"
     else:
@@ -66,15 +56,15 @@ def inspect_strategy_documents() -> str:
 
         if not os.path.exists(local_docs_dir):
             return f"Local strategy documents directory not found at '{local_docs_dir}'."
-            
+
         try:
             pdf_files = [f for f in os.listdir(local_docs_dir) if f.lower().endswith(".pdf")]
         except Exception as e:
             return f"Error listing local directory '{local_docs_dir}': {str(e)}"
-            
+
         if not pdf_files:
             return f"No PDF documents found in local directory '{local_docs_dir}'."
-            
+
         for file_name in pdf_files:
             file_path = os.path.join(local_docs_dir, file_name)
             print(f"[Strategy Agent] Parsing local PDF: '{file_name}'...")

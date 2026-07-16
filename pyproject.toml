@@ -1,5 +1,6 @@
 [tool.uv.workspace]
 members = [
-    "strat_agent",
+    "agents/luncher_agent",
+    "agents/strat_agent",
     "agents/sched_agent",
 ]

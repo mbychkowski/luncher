@@ -39,7 +39,7 @@ GEMINI_API_KEY="your_gemini_api_key_here"
 To start the agent's server, run `uv run` from the repository root. `uv` will automatically synchronize the workspace dependencies and run the agent service:
 
 ```bash
-uv run strat_agent/main.py
+uv run agents/strat_agent/main.py
 ```
 
 ---
@@ -55,7 +55,7 @@ If you prefer to manually synchronize the workspace environment first:
 
 2. Run the A2A Server:
    ```bash
-   uv run strat_agent/main.py
+   uv run agents/strat_agent/main.py
    ```
 
 The server will start up and listen on `0.0.0.0:8080` (or the configured `PORT`).

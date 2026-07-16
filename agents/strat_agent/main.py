@@ -50,7 +50,7 @@ def inspect_strategy_documents() -> str:
     else:
         # Local Development: Fetch from assets/docs
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        repo_root = os.path.dirname(current_dir)
+        repo_root = os.path.dirname(os.path.dirname(current_dir))
         local_docs_dir = os.path.join(repo_root, "assets", "docs")
         print(f"[Strategy Agent] Running in local mode. Inspecting local directory: '{local_docs_dir}'...")
 

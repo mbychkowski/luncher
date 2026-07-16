@@ -1,4 +1,5 @@
 [tool.uv.workspace]
 members = [
     "strat_agent",
+    "agents/sched_agent",
 ]

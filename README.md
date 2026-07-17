@@ -155,7 +155,8 @@ Once your infrastructure is ready, you can build and deploy your customized Flas
 ---
 
 ## 🤖 Running agents locally
-From the repo root, run `uv run agents-cli playground`
+~~From the repo root, run `uv run agents-cli playground`~~
+See `agents/luncher_agent_README.md`
 
 ## 🚀 Deploying agents to Agent Runtime
 [TODO]

@@ -28,5 +28,5 @@ PORT=8081 uv run agents/sched_agent/main.py
 
 ### 3. Start Orchestrator Agent (Port 8082)
 ```bash
-PORT=8082 uv run agents/luncher_agent/main.py
+uv run agents-cli playground --port 8082
 ```

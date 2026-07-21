@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 
-# Install uv for extremely fast, robust dependency management
+# Install uv for fast dependency management
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /repo

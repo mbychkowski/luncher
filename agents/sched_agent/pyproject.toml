@@ -3,7 +3,7 @@ name = "sched-agent"
 version = "0.1.0"
 description = "Meeting & Catering Coordination Agent"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "google-adk[a2a]>=2.0.0",
     "uvicorn",

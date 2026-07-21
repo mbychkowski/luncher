@@ -57,11 +57,9 @@ jobs:
 
       - name: Submit Cloud Build
         run: |
-          gcloud builds submit "./agents/luncher_agent" \
-            --config ./agents/luncher_agent/cloudbuild.yaml \
-            --region ${{ env.GCP_LOCATION }} \
-            --service-account=projects/${{ env.GCP_PROJECT_ID }}/serviceAccounts/${{ env.GCP_SA_GITHUB_ACTIONS }}@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
-            --substitutions _LOCATION=${{ env.GCP_LOCATION }},_IMAGE_TAG=${{ steps.slug.outputs.sha7 }}
+          gcloud builds submit "." \
+            --tag "${{ env.GCP_LOCATION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/luncher-repo/luncher:${{ steps.slug.outputs.sha7 }}" \
+            --region ${{ env.GCP_LOCATION }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3

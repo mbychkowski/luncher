@@ -32,6 +32,28 @@ resource "google_cloud_run_v2_service" "default" {
       ports {
         container_port = 8080
       }
+      resources {
+        limits = {
+          memory = "1Gi"
+        }
+      }
+
+      env {
+        name  = "GOOGLE_GENAI_USE_VERTEXAI"
+        value = "true"
+      }
+      env {
+        name  = "GOOGLE_CLOUD_PROJECT"
+        value = local.project.id
+      }
+      env {
+        name  = "GOOGLE_CLOUD_LOCATION"
+        value = var.region
+      }
+      env {
+        name  = "STRATEGY_DOCS_BUCKET"
+        value = google_storage_bucket.strategy_docs.name
+      }
 
       # -----------------------------------------------------------------
       # OPTIONAL: MOUNT SECRET MANAGER SECRETS TO ENVIRONMENT VARIABLES
@@ -51,17 +73,19 @@ resource "google_cloud_run_v2_service" "default" {
 
   lifecycle {
     # This prevents Terraform from reverting the image back to the placeholder if updated out-of-band
-    ignore_changes = []
+    ignore_changes = [
+      template[0].containers[0].image
+    ]
   }
 }
 
-# Make the Cloud Run service publicly accessible (unauthenticated)
-resource "google_cloud_run_v2_service_iam_member" "noauth" {
+# Cloud Run service invoker permissions (domain-restricted when authorized_domain is set)
+resource "google_cloud_run_v2_service_iam_member" "invoker" {
   project  = local.project.id
   location = google_cloud_run_v2_service.default.location
   name     = google_cloud_run_v2_service.default.name
   role     = "roles/run.invoker"
-  member   = "allUsers"
+  member   = var.authorized_domain != null && var.authorized_domain != "" ? "domain:${var.authorized_domain}" : "allUsers"
 }
 
 # Google Cloud Storage bucket for strategy PDF documents
@@ -74,12 +98,47 @@ resource "google_storage_bucket" "strategy_docs" {
   uniform_bucket_level_access = true
 }
 
+# Explicitly provision the Vertex AI Service Identity
+resource "google_project_service_identity" "aiplatform_sa" {
+  provider = google-beta
+  project  = local.project.id
+  service  = "aiplatform.googleapis.com"
+}
+
 # Grant roles/storage.objectViewer to the AI Platform Reasoning Engine Service Agent on the bucket
 resource "google_storage_bucket_iam_member" "agent_docs_viewer" {
+  bucket     = google_storage_bucket.strategy_docs.name
+  role       = "roles/storage.objectViewer"
+  member     = "serviceAccount:${google_project_service_identity.aiplatform_sa.email}"
+  depends_on = [google_project_service_identity.aiplatform_sa]
+}
+
+# Grant roles/storage.objectViewer to Compute Service Account (Cloud Run)
+resource "google_storage_bucket_iam_member" "compute_sa_docs_viewer" {
   bucket = google_storage_bucket.strategy_docs.name
   role   = "roles/storage.objectViewer"
-  member = "serviceAccount:service-${local.project.number}@gcp-sa-aiplatform-re.iam.gserviceaccount.com"
+  member = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
 }
+
+# Codify Vertex AI Gemini 2.5 Flash RPM Quota Preference
+resource "google_cloud_quotas_quota_preference" "gemini_2_5_flash_quota" {
+  parent        = "projects/${local.project.id}"
+  name          = "gemini-2-5-flash-rpm-quota"
+  service       = "aiplatform.googleapis.com"
+  quota_id      = "GenerateContentRequestsPerMinutePerProjectPerRegionPerBaseModel"
+  contact_email = var.contact_email
+
+  dimensions = {
+    region     = var.region
+    base_model = "gemini-2.5-flash"
+  }
+
+  quota_config {
+    preferred_value = 300
+  }
+}
+
+
 
 
 # -----------------------------------------------------------------

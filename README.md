@@ -202,11 +202,18 @@ Once deployed to Cloud Run or Vertex AI Reasoning Engine, you can interact with 
   Open `https://<YOUR_CLOUD_RUN_URL>/dev-ui/` directly in your browser.
 
 * **Authenticated Local Tunnel (`gcloud run services proxy`):**
-  If IAM authentication or domain restrictions are enabled on Cloud Run, launch an authenticated proxy tunnel to pass Google credentials automatically:
+  If IAM authentication or domain restrictions are enabled on Cloud Run, launch an authenticated proxy tunnel to pass Google credentials automatically.
+
+  You can retrieve the exact proxy command for your deployment from Terraform:
+  ```bash
+  cd terraform && terraform output -raw proxy_command
+  ```
+  Or run `gcloud` directly:
   ```bash
   gcloud run services proxy luncher-service --region us-central1 --project YOUR_PROJECT_ID
   ```
   Then open `http://localhost:8080/dev-ui/` in your browser.
+
 
 ## 🧼 Cleanup
 

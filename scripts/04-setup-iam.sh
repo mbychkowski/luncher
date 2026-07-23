@@ -34,9 +34,11 @@ ROLES=(
     "cloudbuild.builds.editor"
     "run.admin"
     "iam.serviceAccountUser"
+    "iam.serviceAccountTokenCreator"
     "logging.logWriter"
     "storage.admin"
     "resourcemanager.projectIamAdmin"
+    "viewer"
 )
 
 for role in "${ROLES[@]}"; do
@@ -46,5 +48,39 @@ for role in "${ROLES[@]}"; do
     --role "roles/$role" \
     --condition=None >/dev/null
 done
+
+PROJECT_NUMBER=$(gcloud projects describe "$GCP_PROJECT_ID" --format="value(projectNumber)")
+RE_SA="service-${PROJECT_NUMBER}@gcp-sa-aiplatform-re.iam.gserviceaccount.com"
+
+echo "Binding role roles/aiplatform.user to Reasoning Engine Service Account: ${RE_SA}..."
+gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
+  --member="serviceAccount:${RE_SA}" \
+  --role "roles/aiplatform.user" \
+  --condition=None >/dev/null
+
+COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+CLOUDBUILD_SA="${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com"
+
+echo "Binding storage.admin & artifactregistry.admin to Compute SA: ${COMPUTE_SA}..."
+gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
+  --member="serviceAccount:${COMPUTE_SA}" \
+  --role "roles/storage.admin" \
+  --condition=None >/dev/null
+
+gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
+  --member="serviceAccount:${COMPUTE_SA}" \
+  --role "roles/artifactregistry.admin" \
+  --condition=None >/dev/null
+
+gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
+  --member="serviceAccount:${COMPUTE_SA}" \
+  --role "roles/logging.logWriter" \
+  --condition=None >/dev/null
+
+echo "Binding artifactregistry.admin to Cloud Build SA: ${CLOUDBUILD_SA}..."
+gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
+  --member="serviceAccount:${CLOUDBUILD_SA}" \
+  --role "roles/artifactregistry.admin" \
+  --condition=None >/dev/null
 
 echo "IAM bindings successfully applied."

@@ -12,3 +12,9 @@ output "cloud_run_url" {
   value       = google_cloud_run_v2_service.default.uri
   description = "The secure public URL of the deployed Cloud Run service."
 }
+
+output "proxy_command" {
+  value       = "gcloud run services proxy ${google_cloud_run_v2_service.default.name} --region ${google_cloud_run_v2_service.default.location} --project ${local.project.id}"
+  description = "Command to launch an authenticated local proxy tunnel for browser access."
+}
+

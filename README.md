@@ -24,7 +24,7 @@ The deployment architecture ensures secure, modern, and best-practice patterns:
 - **Container Registry**: GCP Artifact Registry
 - **Serverless Hosting**: Google Cloud Run
 - **Container Compilation**: GCP Cloud Build
-- **Application Logic**: Python Flask & Gunicorn microservice
+- **Application Logic**: Python FastAPI & Uvicorn (Google ADK)
 
 ---
 
@@ -39,6 +39,8 @@ Ensure you have the following tools installed and authenticated on your local ma
 1. [Google Cloud SDK (gcloud CLI)](https://cloud.google.com/sdk/docs/install)
 2. [GitHub CLI (gh)](https://github.com/cli/cli#installation)
 3. [Terraform](https://www.terraform.io/downloads.html)
+4. [uv Python Package Manager](https://docs.astral.sh/uv/getting-started/installation/) (`pip install uv` or `curl -LsSf https://astral.sh/uv/install.sh | sh`)
+5. [Google ADK CLI (`adk`)](https://google.github.io/adk/) (`uv tool install google-adk` or `pip install google-adk`)
 
 ---
 
@@ -100,7 +102,11 @@ This script creates a secure GCP service account, initializes a global Workload 
 ```
 
 > [!NOTE]
-> If your `gh` CLI is not authenticated, the script will output the exact key-value variables for you to copy and paste manually into your GitHub Repository settings (**Settings > Secrets and variables > Actions > Variables**).
+> The setup scripts automatically configure `GCP_AUTHORIZED_DOMAIN` (defaults to `google.com`). If you need to update your authorized domain for Cloud Run in GitHub Actions, run:
+> ```bash
+> gh variable set GCP_AUTHORIZED_DOMAIN --body "your-domain.com"
+> ```
+> If your `gh` CLI is not authenticated, you can manually set the variables in your GitHub Repository settings (**Settings > Secrets and variables > Actions > Variables**).
 
 ---
 
@@ -154,12 +160,60 @@ Once your infrastructure is ready, you can build and deploy your customized Flas
 
 ---
 
-## 🤖 Running agents locally
-~~From the repo root, run `uv run agents-cli playground`~~
-See agents/luncher_agent/README.md
+## 🤖 Interacting with Deployed Agents
 
-## 🚀 Deploying agents to Agent Runtime
-[TODO]
+Once deployed to Cloud Run or Vertex AI Reasoning Engine, you can interact with the multi-agent orchestrator using the official Google ADK `agents-cli` tool or directly via A2A endpoints:
+
+### 1. Interactive Terminal Chat (`adk` & `agents-cli`)
+
+* **Run Agent Locally (`adk run`):**
+  ```bash
+  cd agents/luncher_agent && \
+  uv run adk run . "Plan a team lunch meeting for next week"
+  ```
+
+* **Run Local Web UI Playground (`adk web`):**
+  ```bash
+  cd agents/luncher_agent && \
+  uv run adk web .
+  ```
+
+* **Query Deployed Cloud Run Agent (`agents-cli run`):**
+  ```bash
+  cd agents/luncher_agent && \
+  uv run agents-cli run --mode a2a \
+    --url https://<YOUR_CLOUD_RUN_URL> \
+    "Plan a team lunch meeting for next week"
+  ```
+
+---
+
+### 2. A2A Protocol Endpoints
+
+* **Agent Card Discovery URL:**  
+  `https://<YOUR_CLOUD_RUN_URL>/.well-known/agent-card.json`
+
+* **JSON-RPC Endpoint:**  
+  `https://<YOUR_CLOUD_RUN_URL>`
+
+### 3. Accessing the ADK Web UI & Authenticated Proxy (`gcloud run services proxy`)
+
+* **Public Web Playground:**
+  Open `https://<YOUR_CLOUD_RUN_URL>/dev-ui/` directly in your browser.
+
+* **Authenticated Local Tunnel (`gcloud run services proxy`):**
+  If IAM authentication or domain restrictions are enabled on Cloud Run, launch an authenticated proxy tunnel to pass Google credentials automatically.
+
+  You can retrieve the exact proxy command for your deployment from Terraform:
+  ```bash
+  cd terraform && terraform output -raw proxy_command
+  ```
+  Or run `gcloud` directly:
+  ```bash
+  gcloud run services proxy luncher-service --region us-central1 --project YOUR_PROJECT_ID
+  ```
+  Then open `http://localhost:8080/dev-ui/` in your browser.
+
 
 ## 🧼 Cleanup
 

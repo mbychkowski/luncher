@@ -80,9 +80,19 @@ def inspect_strategy_documents() -> str:
     return "\n\n".join(extracted_texts)
 
 
+from google.adk.models.google_llm import Gemini
+from google.genai.types import HttpRetryOptions
+
+strat_retry_policy = HttpRetryOptions(
+    attempts=5,
+    initial_delay=2.0,
+    max_delay=30.0,
+    http_status_codes=[429, 500, 503]
+)
+
 # Define the ADK Agent
 strategy_agent = Agent(
-    model="gemini-2.5-flash",
+    model=Gemini(model="gemini-2.5-flash", retry_options=strat_retry_policy),
     name="strategy_agent",
     description="Analyzes corporate strategy documents and returns a brief strategic summary.",
     instruction=(

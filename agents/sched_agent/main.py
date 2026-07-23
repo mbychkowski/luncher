@@ -123,9 +123,19 @@ def update_team_member_preferences(
         return f"Failed to update team member preferences: {str(e)}"
 
 
+from google.adk.models.google_llm import Gemini
+from google.genai.types import HttpRetryOptions
+
+sched_retry_policy = HttpRetryOptions(
+    attempts=5,
+    initial_delay=2.0,
+    max_delay=30.0,
+    http_status_codes=[429, 500, 503]
+)
+
 # Define the ADK Agent
 scheduling_agent = Agent(
-    model="gemini-2.5-flash",
+    model=Gemini(model="gemini-2.5-flash", retry_options=sched_retry_policy),
     name="scheduling_agent",
     description="Helps coordinate meeting times and catering food preferences across team members interactively.",
     instruction=(

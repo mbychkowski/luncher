@@ -1,2 +1,16 @@
-project_id = "your-unique-project-id"
-region     = "your-cloud-location"
+# Required: GCP Project ID to deploy infrastructure
+project_id = "your-gcp-project-id"
+
+# Primary GCP region for resource deployment (Default: us-central1)
+region = "us-central1"
+
+# Container Image URL for Cloud Run service deployment
+image_url = "us-docker.pkg.dev/cloudrun/container/hello"
+
+# Contact email for automated Cloud Quota increase requests
+contact_email = "user@example.com"
+
+# Optional: Google Workspace / Cloud Identity domain to restrict Cloud Run access
+# authorized_domain = "example.com"
+
+

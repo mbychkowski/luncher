@@ -54,9 +54,9 @@ The easiest way to test this agent interactively is using the workspace's playgr
 
 1. From the repo root, run:
    ```bash
-   uv run agents-cli playground
+   uv run adk web agents/sched_agent
    ```
-2. Select the `scheduling_agent` and try interacting with it!
+2. Open the playground in your browser and try interacting with it!
 
 ### Example Test Scenarios to Try:
 

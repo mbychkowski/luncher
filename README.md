@@ -160,6 +160,7 @@ Once your infrastructure is ready, you can build and deploy your customized Flas
 
 ---
 
+<<<<<<< HEAD
 ## 🤖 Interacting with Deployed Agents
 
 Once deployed to Cloud Run or Vertex AI Reasoning Engine, you can interact with the multi-agent orchestrator using the official Google ADK `agents-cli` tool or directly via A2A endpoints:
@@ -213,6 +214,34 @@ Once deployed to Cloud Run or Vertex AI Reasoning Engine, you can interact with 
   gcloud run services proxy luncher-service --region us-central1 --project YOUR_PROJECT_ID
   ```
   Then open `http://localhost:8080/dev-ui/` in your browser.
+=======
+## 🤖 Running agents locally
+
+To test the multi-agent orchestration locally, you need to run all three agents concurrently from the repository root:
+
+### 1. Start the Strategy Agent (Port 8080)
+```bash
+PORT=8080 uv run agents/strat_agent/main.py
+```
+
+### 2. Start the Scheduling Agent (Port 8081)
+```bash
+PORT=8081 uv run agents/sched_agent/main.py
+```
+
+### 3. Start the Orchestrator Agent Playground (Port 8082)
+The orchestrator agent coordinates the system. Start its web-based playground using:
+```bash
+uv run adk web --port 8082 agents/luncher_agent
+```
+
+Once all three are running, open the Orchestrator playground in your browser at `http://localhost:8082` to interact with and test the agents!
+
+For more detail on each individual agent, see their respective READMEs:
+* [Orchestrator Agent README](file:///home/mbychkowski/Code/luncher/agents/luncher_agent/README.md)
+* [Strategy Agent README](file:///home/mbychkowski/Code/luncher/agents/strat_agent/README.md)
+* [Scheduling Agent README](file:///home/mbychkowski/Code/luncher/agents/sched_agent/README.md)
+>>>>>>> 6377cc0 (docs: update local execution instructions for agents)
 
 
 ## 🧼 Cleanup

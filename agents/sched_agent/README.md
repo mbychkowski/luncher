@@ -72,3 +72,33 @@ The easiest way to test this agent interactively is using the workspace's playgr
 - **Expected Agent Action:** The agent identifies a permanent shift in preferences, invokes the `update_team_member_preferences` tool (updating Alice's dietary restrictions to `["Vegan"]` in `data/team_members.json`), and then recalculates.
 - **Expected Agent Response:** It confirms the permanent update to Alice's profile, and suggests a catering option that fits a Vegan diet (e.g., **Green Garden**).
 - **Subsequent Run Check:** View `data/team_members.json` to verify Alice's record was permanently updated!
+
+---
+
+## ☁️ Deployment
+
+`sched_agent` can be deployed either as part of the consolidated `luncher` container or as an independent microservice:
+
+### 1. Standalone Deployment to Cloud Run
+To deploy `sched_agent` as an independent Cloud Run microservice:
+
+```bash
+gcloud run deploy sched-agent \
+  --source . \
+  --command "uvicorn" \
+  --args "agents.sched_agent.main:a2a_app,--host,0.0.0.0,--port,8080" \
+  --region us-central1 \
+  --project YOUR_PROJECT_ID
+```
+
+### 2. Standalone Deployment via ADK CLI (`agents-cli deploy`)
+```bash
+agents-cli deploy \
+  --project YOUR_PROJECT_ID \
+  --region us-central1 \
+  --service-name sched-agent \
+  --no-confirm-project
+```
+
+Once deployed, copy the service URL and pass it to `luncher_agent` via `SCHED_AGENT_URL`.
+

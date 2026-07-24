@@ -55,16 +55,25 @@ if [ -f "$TF_DIR/terraform.tfvars.example" ]; then
   cp "$TF_DIR/terraform.tfvars.example" "$TF_DIR/terraform.tfvars"
 
   echo "Injecting configured variables into terraform.tfvars..."
-  # Use portable sed logic or standard bash replacements to edit the tfvars file
   if [[ "${OSTYPE:-linux-gnu}" == "darwin"* ]]; then
     # MacOS compatibility
-    sed -i '' "s/your-unique-project-id/${GCP_PROJECT_ID}/g" "$TF_DIR/terraform.tfvars"
-    sed -i '' "s/your-cloud-location/${GCP_LOCATION}/g" "$TF_DIR/terraform.tfvars"
+    sed -i '' "s/your-gcp-project-id/${GCP_PROJECT_ID}/g" "$TF_DIR/terraform.tfvars"
   else
     # Linux standard
-    sed -i "s/your-unique-project-id/${GCP_PROJECT_ID}/g" "$TF_DIR/terraform.tfvars"
-    sed -i "s/your-cloud-location/${GCP_LOCATION}/g" "$TF_DIR/terraform.tfvars"
+    sed -i "s/your-gcp-project-id/${GCP_PROJECT_ID}/g" "$TF_DIR/terraform.tfvars"
   fi
+
+  if [ -n "${GCP_USER_EMAIL:-}" ]; then
+    echo "Injecting IAP support email (${GCP_USER_EMAIL}) into terraform.tfvars..."
+    cat << EOF >> "$TF_DIR/terraform.tfvars"
+
+# Automatically configured IAP & Domain settings
+iap_support_email = "${GCP_USER_EMAIL}"
+iap_members       = ["user:${GCP_USER_EMAIL}"]
+authorized_domain = "${GCP_AUTHORIZED_DOMAIN:-}"
+EOF
+  fi
+
   echo "terraform/terraform.tfvars has been successfully generated."
 else
   echo "Warning: terraform.tfvars.example not found in $TF_DIR"

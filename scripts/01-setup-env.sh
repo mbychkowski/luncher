@@ -46,18 +46,27 @@ _GCP_SA_GITHUB_ACTIONS="sa-github-actions"
 _GCP_PROJECT_ID=$(gcloud config get-value project 2>/dev/null || echo "")
 _GCP_LOCATION=$(gcloud config get-value compute/region 2>/dev/null || echo "")
 _GCP_LOCATION=${_GCP_LOCATION:-us-central1}
+_GCP_USER_EMAIL=$(gcloud config get-value account 2>/dev/null || git config user.email 2>/dev/null || echo "")
+_GCP_AUTHORIZED_DOMAIN=""
+if [ -n "$_GCP_USER_EMAIL" ] && [[ "$_GCP_USER_EMAIL" == *"@"* ]]; then
+  _GCP_AUTHORIZED_DOMAIN=$(echo "$_GCP_USER_EMAIL" | cut -d'@' -f2)
+fi
 
 # Request acceptance of defaults or alternatives
 read -r -p "Enter GitHub organization or owner [${_GITHUB_ORG}]: " GITHUB_ORG
 read -r -p "Enter GitHub repository name [${_GITHUB_REPO}]: " GITHUB_REPO
 read -r -p "Enter GCP project ID [${_GCP_PROJECT_ID}]: " GCP_PROJECT_ID
 read -r -p "Enter default value region for this setup [${_GCP_LOCATION}]: " GCP_LOCATION
+read -r -p "Enter Google account email for IAP support/access [${_GCP_USER_EMAIL}]: " GCP_USER_EMAIL
+read -r -p "Enter Organization Domain for Cloud Run IAM [${_GCP_AUTHORIZED_DOMAIN}]: " GCP_AUTHORIZED_DOMAIN
 
 GITHUB_ORG="${GITHUB_ORG:-${_GITHUB_ORG}}"
 GITHUB_REPO="${GITHUB_REPO:-${_GITHUB_REPO}}"
 GCP_SA_GITHUB_ACTIONS="${GCP_SA_GITHUB_ACTIONS:-${_GCP_SA_GITHUB_ACTIONS}}"
 GCP_PROJECT_ID="${GCP_PROJECT_ID:-${_GCP_PROJECT_ID}}"
 GCP_LOCATION="${GCP_LOCATION:-${_GCP_LOCATION}}"
+GCP_USER_EMAIL="${GCP_USER_EMAIL:-${_GCP_USER_EMAIL}}"
+GCP_AUTHORIZED_DOMAIN="${GCP_AUTHORIZED_DOMAIN:-${_GCP_AUTHORIZED_DOMAIN}}"
 
 if [ -z "$GCP_PROJECT_ID" ]; then
   echo "Error: GCP project ID must not be empty. Please run gcloud config set project [PROJECT_ID] or specify one."
@@ -89,6 +98,8 @@ GITHUB_REPO:           ${GITHUB_REPO}
 GCP_SA_GITHUB_ACTIONS: ${GCP_SA_GITHUB_ACTIONS}
 GCP_PROJECT_ID:        ${GCP_PROJECT_ID}
 GCP_LOCATION:          ${GCP_LOCATION}
+GCP_USER_EMAIL:        ${GCP_USER_EMAIL}
+GCP_AUTHORIZED_DOMAIN: ${GCP_AUTHORIZED_DOMAIN}
 
 EOF
 
@@ -98,6 +109,8 @@ GITHUB_REPO="${GITHUB_REPO}"
 GCP_SA_GITHUB_ACTIONS="${GCP_SA_GITHUB_ACTIONS}"
 GCP_PROJECT_ID="${GCP_PROJECT_ID}"
 GCP_LOCATION="${GCP_LOCATION}"
+GCP_USER_EMAIL="${GCP_USER_EMAIL}"
+GCP_AUTHORIZED_DOMAIN="${GCP_AUTHORIZED_DOMAIN}"
 EOF
 
 echo "Environment configuration completed and written to .env"

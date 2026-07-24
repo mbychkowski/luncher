@@ -7,10 +7,10 @@ region = "us-central1"
 # Container Image URL for Cloud Run service deployment
 image_url = "us-docker.pkg.dev/cloudrun/container/hello"
 
-# Contact email for automated Cloud Quota increase requests
-contact_email = "user@example.com"
-
-# Optional: Google Workspace / Cloud Identity domain to restrict Cloud Run access
-# authorized_domain = "example.com"
-
-
+# Optional: Identity-Aware Proxy (IAP) + Global Load Balancer + Cloud Endpoints Configuration
+# iap_client_id     = "YOUR_OAUTH_CLIENT_ID.apps.googleusercontent.com"
+# iap_client_secret = "YOUR_OAUTH_CLIENT_SECRET"
+# iap_members       = [
+#   "user:alice@example.com",
+#   "domain:example.com"
+# ]

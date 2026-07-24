@@ -4,6 +4,21 @@ locals {
     name   = data.google_project.project.name
     number = data.google_project.project.number
   }
+
+  derived_domain = var.authorized_domain != "" ? var.authorized_domain : (
+    var.iap_support_email != "" ? element(split("@", var.iap_support_email), 1) : ""
+  )
+
+  # Smart invoker member logic:
+  # 1. If authorized_domain or iap_support_email is set, use "domain:<domain>"
+  # 2. Otherwise use var.cloud_run_invoker_member (defaulting to "allUsers")
+  effective_invoker_member = local.derived_domain != "" ? "domain:${local.derived_domain}" : var.cloud_run_invoker_member
+
+  # Automatically grant roles/iap.httpsResourceAccessor to derived domain plus explicit iap_members
+  effective_iap_members = distinct(concat(
+    var.iap_members,
+    local.derived_domain != "" ? ["domain:${local.derived_domain}"] : []
+  ))
 }
 
 data "google_project" "project" {
@@ -24,7 +39,7 @@ resource "google_cloud_run_v2_service" "default" {
   name     = "luncher-service"
   location = var.region
   project  = local.project.id
-  ingress  = "INGRESS_TRAFFIC_ALL"
+  ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
 
   template {
     containers {
@@ -79,14 +94,7 @@ resource "google_cloud_run_v2_service" "default" {
   }
 }
 
-# Cloud Run service invoker permissions (domain-restricted when authorized_domain is set)
-resource "google_cloud_run_v2_service_iam_member" "invoker" {
-  project  = local.project.id
-  location = google_cloud_run_v2_service.default.location
-  name     = google_cloud_run_v2_service.default.name
-  role     = "roles/run.invoker"
-  member   = var.authorized_domain != null && var.authorized_domain != "" ? "domain:${var.authorized_domain}" : "allUsers"
-}
+
 
 # Google Cloud Storage bucket for strategy PDF documents
 resource "google_storage_bucket" "strategy_docs" {
@@ -105,6 +113,30 @@ resource "google_project_service_identity" "aiplatform_sa" {
   service  = "aiplatform.googleapis.com"
 }
 
+# Explicitly provision the IAP Service Identity
+resource "google_project_service_identity" "iap_sa" {
+  provider = google-beta
+  project  = local.project.id
+  service  = "iap.googleapis.com"
+}
+
+# Grant roles/run.invoker to the IAP Service Account on Cloud Run
+resource "google_cloud_run_v2_service_iam_member" "iap_invoker" {
+  project  = local.project.id
+  location = var.region
+  name     = google_cloud_run_v2_service.default.name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_project_service_identity.iap_sa.email}"
+}
+
+# Grant roles/aiplatform.user to Vertex AI Reasoning Engine Service Identity
+resource "google_project_iam_member" "aiplatform_sa_user" {
+  project    = local.project.id
+  role       = "roles/aiplatform.user"
+  member     = "serviceAccount:${google_project_service_identity.aiplatform_sa.email}"
+  depends_on = [google_project_service_identity.aiplatform_sa]
+}
+
 # Grant roles/storage.objectViewer to the AI Platform Reasoning Engine Service Agent on the bucket
 resource "google_storage_bucket_iam_member" "agent_docs_viewer" {
   bucket     = google_storage_bucket.strategy_docs.name
@@ -120,23 +152,83 @@ resource "google_storage_bucket_iam_member" "compute_sa_docs_viewer" {
   member = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
 }
 
-# Codify Vertex AI Gemini 2.5 Flash RPM Quota Preference
-resource "google_cloud_quotas_quota_preference" "gemini_2_5_flash_quota" {
-  parent        = "projects/${local.project.id}"
-  name          = "gemini-2-5-flash-rpm-quota"
-  service       = "aiplatform.googleapis.com"
-  quota_id      = "GenerateContentRequestsPerMinutePerProjectPerRegionPerBaseModel"
-  contact_email = var.contact_email
+# Grant roles/storage.objectViewer to Compute Service Account project-wide (required for Cloud Build source retrieval)
+resource "google_project_iam_member" "compute_sa_storage_viewer" {
+  project = local.project.id
+  role    = "roles/storage.objectViewer"
+  member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+}
 
-  dimensions = {
-    region     = var.region
-    base_model = "gemini-2.5-flash"
-  }
+# Grant roles/logging.logWriter to Compute Service Account (Cloud Run)
+resource "google_project_iam_member" "compute_sa_log_writer" {
+  project = local.project.id
+  role    = "roles/logging.logWriter"
+  member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+}
 
-  quota_config {
-    preferred_value = 300
+# Grant Artifact Registry Reader to Compute Default Service Account (used by Cloud Run to pull images)
+resource "google_artifact_registry_repository_iam_member" "compute_sa_ar_reader" {
+  project    = local.project.id
+  location   = var.region
+  repository = google_artifact_registry_repository.registry.name
+  role       = "roles/artifactregistry.reader"
+  member     = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+}
+
+# Grant Artifact Registry Writer to Compute Default Service Account (used by Cloud Build to push images)
+resource "google_artifact_registry_repository_iam_member" "compute_sa_ar_writer" {
+  project    = local.project.id
+  location   = var.region
+  repository = google_artifact_registry_repository.registry.name
+  role       = "roles/artifactregistry.writer"
+  member     = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+}
+
+# Optional: Override domain-restricted sharing if Org Policy blocks allUsers
+resource "google_project_organization_policy" "disable_domain_restriction" {
+  count      = var.override_domain_restriction ? 1 : 0
+  project    = local.project.id
+  constraint = "constraints/iam.allowedPolicyMemberDomains"
+
+  list_policy {
+    allow {
+      all = true
+    }
   }
 }
+
+# Allow Load Balancer access to Cloud Run (IAP enforces authentication at GCLB)
+resource "google_cloud_run_v2_service_iam_member" "lb_invoker" {
+  count    = local.effective_invoker_member != "" ? 1 : 0
+  project  = local.project.id
+  location = var.region
+  name     = google_cloud_run_v2_service.default.name
+  role     = "roles/run.invoker"
+  member   = local.effective_invoker_member
+
+  depends_on = [google_project_organization_policy.disable_domain_restriction]
+}
+
+# -----------------------------------------------------------------
+# GLOBAL HTTP(S) LOAD BALANCER + IAP + CLOUD ENDPOINTS MODULE
+# -----------------------------------------------------------------
+module "iap_gclb" {
+  count                  = (var.iap_client_id != "" || var.iap_support_email != "") ? 1 : 0
+  source                 = "./modules/iap_gclb"
+  project_id             = local.project.id
+  region                 = var.region
+  name_prefix            = "luncher"
+  dns_prefix             = "luncher"
+  cloud_run_service_name = google_cloud_run_v2_service.default.name
+  iap_client_id          = var.iap_client_id
+  iap_client_secret      = var.iap_client_secret
+  support_email          = var.iap_support_email
+  enable_brand_creation  = var.enable_brand_creation
+  iap_members            = local.effective_iap_members
+}
+
+
+
 
 
 

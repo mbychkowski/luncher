@@ -9,7 +9,7 @@ set -euo pipefail
 #
 #      http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed slide to in writing, software
+# Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
@@ -26,7 +26,7 @@ source .env
 
 echo "Enabling Google Cloud APIs for project ${GCP_PROJECT_ID}..."
 
-# Enable APIs needed for CI/CD, Container Building, Artifact Registry, and Cloud Run
+# Enable APIs needed for CI/CD, Container Building, Artifact Registry, Cloud Run, GCLB, IAP, and Endpoints
 for GOOGLE_CLOUD_API in \
   compute.googleapis.com \
   artifactregistry.googleapis.com \
@@ -38,6 +38,9 @@ for GOOGLE_CLOUD_API in \
   serviceusage.googleapis.com \
   storage.googleapis.com \
   aiplatform.googleapis.com \
+  iap.googleapis.com \
+  endpoints.googleapis.com \
+  servicemanagement.googleapis.com \
     ; do
   echo "Enabling ${GOOGLE_CLOUD_API}..."
   gcloud services enable --project "${GCP_PROJECT_ID}" "${GOOGLE_CLOUD_API}"

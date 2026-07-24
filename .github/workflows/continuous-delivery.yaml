@@ -21,11 +21,13 @@ on:
   #   branches:
   #     - main
   #   paths:
-  #     - 'agents/luncher_agent/**'
+  #     - 'agents/**'
+  #     - 'Dockerfile'
+  #     - 'pyproject.toml'
 
 jobs:
   build-and-deploy:
-    name: Build & Deploy via Terraform
+    name: Build & Deploy Application Container
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
@@ -55,34 +57,19 @@ jobs:
         id: slug
         run: echo "sha7=$(echo ${GITHUB_SHA} | cut -c1-7)" >> $GITHUB_OUTPUT
 
-      - name: Submit Cloud Build
+      - name: Submit Cloud Build & Push to Artifact Registry
         run: |
+          IMAGE_URI="${{ env.GCP_LOCATION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/luncher-repo/luncher"
           gcloud builds submit "." \
-            --tag "${{ env.GCP_LOCATION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/luncher-repo/luncher:${{ steps.slug.outputs.sha7 }}" \
+            --tag "${IMAGE_URI}:${{ steps.slug.outputs.sha7 }}" \
             --region ${{ env.GCP_LOCATION }}
+          gcloud artifacts docker tags add \
+            "${IMAGE_URI}:${{ steps.slug.outputs.sha7 }}" \
+            "${IMAGE_URI}:latest"
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.6.3"
-
-      - name: Terraform Init
+      - name: Deploy Container Update to Cloud Run
         run: |
-          terraform init \
-            -backend-config="bucket=bkt-tf-state-${{ env.GCP_PROJECT_ID }}-${{ github.event.repository.name }}"
-        working-directory: terraform
-
-      - name: Terraform Apply (Deploy Service Update)
-        run: |
-          # Use Terraform to deploy the new container image to Google Cloud Run
-          #
-          # NOTE ON SECRETS: 
-          # Because Cloud Run is managed by Terraform, any Secret Manager integration or secret-mounting is
-          # configured directly in 'terraform/main.tf'. The GitHub Action automatically applies those 
-          # configurations during this step without needing to pass sensitive keys through GitHub Action secrets!
-          terraform apply \
-            -auto-approve \
-            -var "project_id=${{ env.GCP_PROJECT_ID }}" \
-            -var "region=${{ env.GCP_LOCATION }}" \
-            -var "image_url=${{ env.GCP_LOCATION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/luncher-repo/luncher:${{ steps.slug.outputs.sha7 }}"
-        working-directory: terraform
+          gcloud run deploy luncher-service \
+            --image "${{ env.GCP_LOCATION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/luncher-repo/luncher:${{ steps.slug.outputs.sha7 }}" \
+            --region "${{ env.GCP_LOCATION }}" \
+            --platform managed

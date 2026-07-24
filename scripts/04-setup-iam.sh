@@ -25,62 +25,55 @@ fi
 source .env
 
 SA_EMAIL="${GCP_SA_GITHUB_ACTIONS}@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
+PROJECT_NUMBER=$(gcloud projects describe "${GCP_PROJECT_ID}" --format="value(projectNumber)")
+COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
 
-echo "Adding IAM roles to GitHub Actions Service Account: ${SA_EMAIL}..."
+echo "Applying least-privilege IAM roles to GitHub Actions Service Account: ${SA_EMAIL}..."
 
-# List of roles required for GitHub Actions to manage and deploy to Cloud Run via Terraform
+# Project-level roles required for Cloud Run, GCLB Load Balancing, IAP, OAuth Brand, Cloud Endpoints, and Terraform
 ROLES=(
     "artifactregistry.admin"
     "cloudbuild.builds.editor"
-    "run.admin"
-    "iam.serviceAccountUser"
-    "iam.serviceAccountTokenCreator"
+    "cloudquotas.admin"
+    "compute.admin"
+    "iap.admin"
     "logging.logWriter"
-    "storage.admin"
+    "oauthconfig.editor"
     "resourcemanager.projectIamAdmin"
+    "run.admin"
+    "servicemanagement.admin"
+    "serviceusage.serviceUsageConsumer"
+    "storage.admin"
     "viewer"
 )
 
 for role in "${ROLES[@]}"; do
-  echo "Binding role roles/${role}..."
+  echo "Binding project role roles/${role}..."
   gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
     --member="serviceAccount:${SA_EMAIL}" \
     --role "roles/$role" \
     --condition=None >/dev/null
 done
 
-PROJECT_NUMBER=$(gcloud projects describe "$GCP_PROJECT_ID" --format="value(projectNumber)")
-RE_SA="service-${PROJECT_NUMBER}@gcp-sa-aiplatform-re.iam.gserviceaccount.com"
+# 2. Targeted Service Account User binding (scoped directly to Compute Default SA instead of project-wide)
+echo "Binding roles/iam.serviceAccountUser specifically on Compute Default SA (${COMPUTE_SA})..."
+gcloud iam service-accounts add-iam-policy-binding "${COMPUTE_SA}" \
+  --project="${GCP_PROJECT_ID}" \
+  --role="roles/iam.serviceAccountUser" \
+  --member="serviceAccount:${SA_EMAIL}" >/dev/null
 
-echo "Binding role roles/aiplatform.user to Reasoning Engine Service Account: ${RE_SA}..."
-gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
-  --member="serviceAccount:${RE_SA}" \
-  --role "roles/aiplatform.user" \
-  --condition=None >/dev/null
-
-COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
-CLOUDBUILD_SA="${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com"
-
-echo "Binding storage.admin & artifactregistry.admin to Compute SA: ${COMPUTE_SA}..."
+echo "Binding roles/storage.objectViewer to Compute Default SA (${COMPUTE_SA}) for Cloud Build..."
 gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
   --member="serviceAccount:${COMPUTE_SA}" \
-  --role "roles/storage.admin" \
-  --condition=None >/dev/null
+  --role="roles/storage.objectViewer" >/dev/null
 
-gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
-  --member="serviceAccount:${COMPUTE_SA}" \
-  --role "roles/artifactregistry.admin" \
-  --condition=None >/dev/null
+# 3. Targeted Bucket-level Admin binding for Terraform state bucket (if bucket exists)
+STATE_BUCKET="bkt-tf-state-${GCP_PROJECT_ID}-${GITHUB_REPO}"
+if gcloud storage buckets describe "gs://${STATE_BUCKET}" --project="${GCP_PROJECT_ID}" >/dev/null 2>&1; then
+  echo "Binding roles/storage.admin on Terraform state bucket gs://${STATE_BUCKET}..."
+  gcloud storage buckets add-iam-policy-binding "gs://${STATE_BUCKET}" \
+    --member="serviceAccount:${SA_EMAIL}" \
+    --role="roles/storage.admin" >/dev/null 2>&1 || true
+fi
 
-gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
-  --member="serviceAccount:${COMPUTE_SA}" \
-  --role "roles/logging.logWriter" \
-  --condition=None >/dev/null
-
-echo "Binding artifactregistry.admin to Cloud Build SA: ${CLOUDBUILD_SA}..."
-gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
-  --member="serviceAccount:${CLOUDBUILD_SA}" \
-  --role "roles/artifactregistry.admin" \
-  --condition=None >/dev/null
-
-echo "IAM bindings successfully applied."
+echo "IAM bindings successfully applied to GitHub Actions Service Account."

@@ -86,11 +86,48 @@ print(result)
 
 ---
 
-## ☁️ Agent Runtime Deployment
+## ☁️ Deployment
 
-The agent is fully compatible with **Agent Runtime**, Google's fully-managed platform for hosting AI agents. To deploy:
+`strat_agent` can be deployed either as part of the primary `luncher` container image or as an independent microservice on **Google Cloud Run** or **Vertex AI Agent Runtime**.
 
-1. Containerize the application using standard Cloud Build.
-2. Deploy to Agent Runtime with `PORT` mapping.
-3. Configure the `STRATEGY_DOCS_BUCKET` env variable in your Deployment configuration.
-4. Ensure the Agent Runtime Service Account has `roles/storage.objectViewer` permissions on your GCS bucket.
+### 1. Standalone Deployment to Cloud Run (`gcloud`)
+
+To deploy `strat_agent` as an independent Cloud Run microservice:
+
+```bash
+gcloud run deploy strat-agent \
+  --source . \
+  --command "uvicorn" \
+  --args "agents.strat_agent.main:a2a_app,--host,0.0.0.0,--port,8080" \
+  --region us-central1 \
+  --project YOUR_PROJECT_ID \
+  --set-env-vars "STRATEGY_DOCS_BUCKET=luncher-strategy-docs-YOUR_PROJECT_ID,GOOGLE_CLOUD_PROJECT=YOUR_PROJECT_ID"
+```
+
+Ensure the Cloud Run Service Account has `roles/storage.objectViewer` on your strategy docs Cloud Storage bucket.
+
+### 2. Standalone Deployment via ADK CLI (`agents-cli deploy`)
+
+Deploy to Cloud Run:
+```bash
+agents-cli deploy \
+  --project YOUR_PROJECT_ID \
+  --region us-central1 \
+  --service-name strat-agent \
+  --update-env-vars "STRATEGY_DOCS_BUCKET=luncher-strategy-docs-YOUR_PROJECT_ID,GOOGLE_CLOUD_PROJECT=YOUR_PROJECT_ID" \
+  --no-confirm-project
+```
+
+Or deploy to **Vertex AI Agent Runtime**:
+```bash
+agents-cli deploy \
+  --deployment-target agent_runtime \
+  --project YOUR_PROJECT_ID \
+  --region us-central1 \
+  --service-name strat-agent \
+  --update-env-vars "STRATEGY_DOCS_BUCKET=luncher-strategy-docs-YOUR_PROJECT_ID" \
+  --no-confirm-project
+```
+
+Once deployed, copy the service URL and pass it to `luncher_agent` via `STRAT_AGENT_URL` (or rely on Vertex AI dynamic discovery by `display_name`).
+

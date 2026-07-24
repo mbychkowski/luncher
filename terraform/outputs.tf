@@ -10,7 +10,7 @@ output "artifact_registry_location" {
 
 output "cloud_run_url" {
   value       = google_cloud_run_v2_service.default.uri
-  description = "The secure public URL of the deployed Cloud Run service."
+  description = "The internal Cloud Run service URI."
 }
 
 output "proxy_command" {
@@ -18,3 +18,12 @@ output "proxy_command" {
   description = "Command to launch an authenticated local proxy tunnel for browser access."
 }
 
+output "iap_endpoint_url" {
+  value       = length(module.iap_gclb) > 0 ? module.iap_gclb[0].endpoint_url : null
+  description = "The secure Cloud Endpoints HTTPS URL protected by IAP."
+}
+
+output "iap_load_balancer_ip" {
+  value       = length(module.iap_gclb) > 0 ? module.iap_gclb[0].load_balancer_ip : null
+  description = "The reserved external IP address of the Global Load Balancer."
+}

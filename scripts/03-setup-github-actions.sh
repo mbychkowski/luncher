@@ -121,6 +121,9 @@ if [ "$GH_AVAILABLE" = true ]; then
   gh variable set GCP_PROJECT_ID --body "${GCP_PROJECT_ID}" --repo "${GITHUB_ORG}/${GITHUB_REPO}"
   gh variable set GCP_LOCATION --body "${GCP_LOCATION}" --repo "${GITHUB_ORG}/${GITHUB_REPO}"
   gh variable set GCP_WI_PROVIDER_ID --body "${GCP_WI_PROVIDER_ID}" --repo "${GITHUB_ORG}/${GITHUB_REPO}"
+  if [ -n "${GCP_USER_EMAIL:-}" ]; then
+    gh variable set GCP_USER_EMAIL --body "${GCP_USER_EMAIL}" --repo "${GITHUB_ORG}/${GITHUB_REPO}"
+  fi
   if [ -n "${GCP_AUTHORIZED_DOMAIN:-}" ]; then
     gh variable set GCP_AUTHORIZED_DOMAIN --body "${GCP_AUTHORIZED_DOMAIN}" --repo "${GITHUB_ORG}/${GITHUB_REPO}"
   fi
@@ -131,5 +134,6 @@ else
   echo "  - GCP_PROJECT_ID: ${GCP_PROJECT_ID}"
   echo "  - GCP_LOCATION: ${GCP_LOCATION}"
   echo "  - GCP_WI_PROVIDER_ID: ${GCP_WI_PROVIDER_ID}"
-  echo "  - GCP_AUTHORIZED_DOMAIN: ${GCP_AUTHORIZED_DOMAIN:-google.com}"
+  echo "  - GCP_USER_EMAIL: ${GCP_USER_EMAIL:-}"
+  echo "  - GCP_AUTHORIZED_DOMAIN: ${GCP_AUTHORIZED_DOMAIN:-}"
 fi

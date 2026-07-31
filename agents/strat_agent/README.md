@@ -4,6 +4,14 @@ An agentic application built using the Google Agent Development Kit (ADK) that i
 
 The agent is exposed via the open **Agent-to-Agent (A2A)** protocol, allowing other distributed agents to call, delegate, and collaborate with it.
 
+
+---
+
+## 🏛️ Architecture & Document Storage
+
+- **Local Development**: Reads strategy `.pdf` files from the local directory `agents/strat_agent/data/docs/`.
+- **Google Cloud Storage (GCS) Integration**: In production deployments, `strat_agent` connects to a designated GCS Bucket (`gs://$GOOGLE_CLOUD_PROJECT_ID-strategy-docs/`) to dynamically retrieve corporate strategy PDF documents for automated indexing and RAG processing.
+
 ---
 
 ## 🛠️ Configuration
@@ -11,7 +19,7 @@ The agent is exposed via the open **Agent-to-Agent (A2A)** protocol, allowing ot
 The agent is dynamically self-configuring and switches its document source based on environment variables:
 
 1. **Local Development (Default)**:
-   Reads `.pdf` files from the local directory `assets/docs/`.
+   Reads `.pdf` files from the local directory `agents/strat_agent/data/docs/`.
 2. **Production (Google Cloud)**:
    If `STRATEGY_DOCS_BUCKET` is specified, the agent connects via the Google Cloud SDK client to read strategy PDFs directly from the GCS bucket.
 

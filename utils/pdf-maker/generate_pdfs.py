@@ -50,15 +50,15 @@ except ImportError as e:
 # Helper function to get Gemini Client
 def get_gemini_client():
     api_key = os.environ.get("GEMINI_API_KEY")
-    project_id = os.environ.get("GCP_PROJECT_ID")
-    location = os.environ.get("GCP_LOCATION", "us-central1")
+    project_id = os.environ.get("GOOGLE_CLOUD_PROJECT_ID")
+    location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
     
     if api_key:
         return genai.Client(api_key=api_key)
     elif project_id:
         return genai.Client(vertexai=True, project=project_id, location=location)
     else:
-        raise ValueError("Neither GEMINI_API_KEY nor GCP_PROJECT_ID is set. Please add one to your environment or root .env file.")
+        raise ValueError("Neither GEMINI_API_KEY nor GOOGLE_CLOUD_PROJECT_ID is set. Please add one to your environment or root .env file.")
 
 
 # ----------------------------------------------------------------------
@@ -616,8 +616,8 @@ def compile_corpus():
         print(f"Error: {e}")
         sys.exit(1)
         
-    # Create final docs folder inside assets/
-    output_docs_dir = ROOT_DIR / "assets" / "docs"
+    # Create final docs folder inside agents/strat_agent/data/docs
+    output_docs_dir = ROOT_DIR / "agents" / "strat_agent" / "data" / "docs"
     output_docs_dir.mkdir(parents=True, exist_ok=True)
     
     styles = create_custom_styles()
@@ -738,7 +738,7 @@ def compile_corpus():
             
             doc_template.build(story, canvasmaker=canvas_class)
             doc_duration = time.time() - doc_start
-            print(f"📄 [Success] Compiled {idx:02d}/{len(documents)}: assets/docs/{doc['filename']} in {doc_duration:.2f}s")
+            print(f"📄 [Success] Compiled {idx:02d}/{len(documents)}: agents/strat_agent/data/docs/{doc['filename']} in {doc_duration:.2f}s")
 
     total_duration = time.time() - start_time
     print(f"\n🎉 PDF Corpus Compilation Complete! All documents compiled in {total_duration:.2f} seconds.")

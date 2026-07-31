@@ -9,7 +9,7 @@ set -euo pipefail
 #
 #      http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed slide to in writing, software
+# Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
@@ -24,9 +24,16 @@ fi
 # shellcheck source=/dev/null
 source .env
 
-echo "Enabling Google Cloud APIs for project ${GCP_PROJECT_ID}..."
+GOOGLE_CLOUD_PROJECT_ID="${GOOGLE_CLOUD_PROJECT_ID:-}"
 
-# Enable APIs needed for CI/CD, Container Building, Artifact Registry, and Cloud Run
+if [ -z "${GOOGLE_CLOUD_PROJECT_ID:-}" ]; then
+  echo "Error: GOOGLE_CLOUD_PROJECT_ID is not set in .env."
+  exit 1
+fi
+
+echo "Enabling Google Cloud APIs for project ${GOOGLE_CLOUD_PROJECT_ID}..."
+
+# Enable APIs needed for Container Building, Artifact Registry, Cloud Run, and Gemini Enterprise Agent Platform (GEAP)
 for GOOGLE_CLOUD_API in \
   compute.googleapis.com \
   artifactregistry.googleapis.com \
@@ -40,11 +47,11 @@ for GOOGLE_CLOUD_API in \
   aiplatform.googleapis.com \
     ; do
   echo "Enabling ${GOOGLE_CLOUD_API}..."
-  gcloud services enable --project "${GCP_PROJECT_ID}" "${GOOGLE_CLOUD_API}"
+  gcloud services enable --project "${GOOGLE_CLOUD_PROJECT_ID}" "${GOOGLE_CLOUD_API}"
 done
 
 echo "Google Cloud APIs successfully enabled."
 
-gcloud config set compute/region "${GCP_LOCATION}" >/dev/null 2>&1
+gcloud config set compute/region "${GOOGLE_CLOUD_LOCATION}" >/dev/null 2>&1
 
-echo "Google Cloud default region set to ${GCP_LOCATION}"
+echo "Google Cloud default region set to ${GOOGLE_CLOUD_LOCATION}"

@@ -8,13 +8,17 @@ It is exposed via the **Agent-to-Agent (A2A)** protocol, making it ready for mul
 
 ---
 
-## 🏗️ Architecture & Mock Databases
 
-To ensure reliable, deterministic, and testable behavior, the agent uses three structured JSON files inside the `data/` directory:
+## 🏗️ Architecture & Database Integrations
 
-1. **`data/team_members.json`**: Holds profiles, preferred times, dietary restrictions, cuisine interests, and weekly schedule availabilities.
-2. **`data/catering_options.json`**: Lists local catering options, ratings, and dietary compatibility (Vegetarian, Gluten-Free, Halal, etc.).
-3. **`data/booked_meetings.json`**: Holds record of successfully scheduled and confirmed meetings.
+1. **Local Development (Mock Databases)**:
+   - **`data/team_members.json`**: Holds profiles, preferred times, dietary restrictions, cuisine interests, and weekly schedule availabilities.
+   - **`data/catering_options.json`**: Lists local catering options, ratings, and dietary compatibility (Vegetarian, Gluten-Free, Halal, etc.).
+   - **`data/booked_meetings.json`**: Holds record of successfully scheduled and confirmed meetings.
+
+2. **BigQuery Integration via Model Context Protocol (MCP)**:
+   - In production, `sched_agent` integrates a **BigQuery MCP Server** connector (`bigquery_dataset.catering_options`). This allows the agent to dynamically query live catering vendor menus, dietary compatibility flags, and team ordering history in BigQuery via MCP standard tools.
+
 
 ---
 
@@ -54,9 +58,9 @@ The easiest way to test this agent interactively is using the workspace's playgr
 
 1. From the repo root, run:
    ```bash
-   uv run agents-cli playground
+   uv run adk web agents/sched_agent
    ```
-2. Select the `scheduling_agent` and try interacting with it!
+2. Open the playground in your browser and try interacting with it!
 
 ### Example Test Scenarios to Try:
 

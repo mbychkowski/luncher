@@ -1,4 +1,3 @@
-from .main import scheduling_agent
+from app.agent import root_agent, app
 
-# Expose the scheduling agent as the root agent for ADK discovery
-root_agent = scheduling_agent
+__all__ = ["root_agent", "app"]

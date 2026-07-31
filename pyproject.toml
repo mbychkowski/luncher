@@ -1,6 +1,0 @@
-[tool.uv.workspace]
-members = [
-    "agents/luncher_agent",
-    "agents/strat_agent",
-    "agents/sched_agent",
-]

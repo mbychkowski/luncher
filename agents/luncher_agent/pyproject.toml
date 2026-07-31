@@ -3,17 +3,36 @@ name = "luncher-agent"
 version = "0.1.0"
 description = "Centralized Luncher Multi-Agent Orchestrator"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12, <3.14"
 dependencies = [
-    "google-adk[a2a]>=2.0.0",
-    "google-agents-cli",
+    "google-adk[a2a,gcp]>=2.0.0,<3.0.0",
+    "a2a-sdk[http-server]~=0.3.22",
     "uvicorn",
     "python-dotenv",
     "starlette",
     "sse-starlette",
-    "pypdf",
-    "google-cloud-storage",
+    "httpx",
+    "aiohttp>=3.9.0",
+    "google-cloud-aiplatform[agent-engines,evaluation]>=1.156.0",
+    "google-cloud-logging>=3.12.0,<4.0.0",
+    "opentelemetry-instrumentation-google-genai>=0.1.0,<1.0.0",
+    "protobuf>=6.31.1,<7.0.0",
+    "google-cloud-agentidentitycredentials>=0.1.0",
+    "google-cloud-iamconnectorcredentials>=0.1.1",
+    "pytest>=8.0.0",
 ]
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+default = true
 
 [tool.uv]
 package = false
+environments = ["sys_platform == 'linux'"]
+
+[tool.pytest.ini_options]
+pythonpath = "."
+
+
+

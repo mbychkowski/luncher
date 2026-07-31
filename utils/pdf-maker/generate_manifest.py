@@ -52,18 +52,18 @@ class ManifestList(BaseModel):
 
 def get_gemini_client():
     api_key = os.environ.get("GEMINI_API_KEY")
-    project_id = os.environ.get("GCP_PROJECT_ID")
-    location = os.environ.get("GCP_LOCATION", "us-central1")
+    project_id = os.environ.get("GOOGLE_CLOUD_PROJECT_ID")
+    location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
     
     if api_key:
         print("🔑 Authenticating via GEMINI_API_KEY...")
         return genai.Client(api_key=api_key)
     elif project_id:
-        print(f"☁️ Authenticating via Vertex AI ADC (Project: {project_id}, Region: {location})...")
+        print(f"☁️ Authenticating via Gemini Enterprise Agent Platform (GEAP) ADC (Project: {project_id}, Region: {location})...")
         return genai.Client(vertexai=True, project=project_id, location=location)
     else:
         raise ValueError(
-            "Neither GEMINI_API_KEY nor GCP_PROJECT_ID is set. "
+            "Neither GEMINI_API_KEY nor GOOGLE_CLOUD_PROJECT_ID is set. "
             "Please configure one of these in your environment or root .env file."
         )
 

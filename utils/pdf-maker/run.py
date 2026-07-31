@@ -73,13 +73,13 @@ def load_environment():
         pass # Will be installed by check_and_bootstrap_dependencies
         
     api_key = os.environ.get("GEMINI_API_KEY")
-    project_id = os.environ.get("GCP_PROJECT_ID")
+    project_id = os.environ.get("GOOGLE_CLOUD_PROJECT_ID")
     
     if not api_key and not project_id:
         print("\n❌ Error: No authentication credentials found.")
         print("Please resolve this by either:")
         print("  1. Setting `GEMINI_API_KEY` in the root `.env` or your environment.")
-        print("  2. Configuring Google Cloud Application Default Credentials (ADC) and setting `GCP_PROJECT_ID` in the root `.env` or your environment.")
+        print("  2. Configuring Google Cloud Application Default Credentials (ADC) and setting `GOOGLE_CLOUD_PROJECT_ID` in the root `.env` or your environment.")
         print("\nGet a free API key from Google AI Studio: https://aistudio.google.com/")
         sys.exit(1)
 
@@ -141,7 +141,7 @@ Examples:
         print("✅ Step 2 complete!\n")
         
     print("======================================================================")
-    print("🎉 Done! All generated PDFs are stored in 'assets/docs/'.")
+    print("🎉 Done! All generated PDFs are stored in 'agents/strat_agent/data/docs/'.")
     print("======================================================================")
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
-from .main import strategy_agent
+from app.agent import root_agent
 
 # Expose the strategy agent as the root agent for ADK discovery
-root_agent = strategy_agent
+__all__ = ["root_agent"]
+

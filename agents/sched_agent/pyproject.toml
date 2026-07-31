@@ -27,7 +27,6 @@ default = true
 
 [tool.uv]
 package = false
-environments = ["sys_platform == 'linux'"]
 
 [tool.pytest.ini_options]
 pythonpath = "."

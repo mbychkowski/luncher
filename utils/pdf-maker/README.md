@@ -12,8 +12,8 @@ This utility generates a high-quality, professional corporate document corpus (P
      ```
    * **Option B: Google Cloud Application Default Credentials (ADC)** (Add GCP variables to `.env` and authenticate your terminal):
      ```env
-     GCP_PROJECT_ID="your_gcp_project_id"
-     GCP_LOCATION="us-central1"
+     GOOGLE_CLOUD_PROJECT_ID="your_gcp_project_id"
+     GOOGLE_CLOUD_LOCATION="us-central1"
      ```
      Ensure you are authenticated:
      ```bash
@@ -51,4 +51,4 @@ The generation is split into two steps: creating a manifest blueprint of 15 docu
   ./run.py --force-new-manifest
   ```
 
-Generated PDFs are saved inside `assets/docs/`.
+Generated PDFs are saved inside `agents/strat_agent/data/docs/`.

@@ -1,224 +1,260 @@
-# 🍔 Luncher
+# 🍔 Luncher: Multi-Agent Orchestration Engine
+
+Luncher is an enterprise multi-agent application built on the **Google Agent Development Kit (ADK) v2** and **Agent-to-Agent (A2A) protocol**.
+
+It coordinates strategy-aligned team lunch meetings by orchestrating two specialized sub-agents:
+- 🎯 **Strategy Agent** (`strat_agent`): Analyzes corporate strategy documents and product launch roadmaps.
+- 📅 **Scheduling Agent** (`sched_agent`): Coordinates team member availability, dietary constraints, and catering choices.
+- 👑 **Luncher Orchestrator** (`luncher_agent`): The primary user-facing frontend agent that delegates tasks to the Strategy and Scheduling agents and synthesizes cohesive recommendations.
 
 ---
 
-## 🏗️ Architecture
+## 📝 TODO / Future Architecture Enhancements
 
-The deployment architecture ensures secure, modern, and best-practice patterns:
-
-1. **Secure Auth via Workload Identity**: No long-lived GCP service account keys (`JSON` files) are stored in GitHub. We use keyless OpenID Connect (OIDC) through Google Cloud Workload Identity Pools.
-2. **Automated Infrastructure (Terraform)**: GCS Remote backend stores our state securely. Terraform acts as the single source of truth, managing:
-   - An Artifact Registry repository (`luncher-repo`) for our container images.
-   - The Cloud Run service (`luncher-service`) with secure configurations.
-   - Public IAM permissions to allow unauthenticated web visitors.
-3. **Continuous Delivery (CI/CD)**:
-   - Built on-demand using Google Cloud Build (which avoids having to expose Docker daemons in GitHub runners).
-   - Deployed directly and securely to **Google Cloud Run** by passing the newly compiled container image tag straight into a `terraform apply` step.
+- 📄 **Strategy Documents in Google Cloud Storage (GCS)**: Update `strat_agent` to dynamically ingest and query corporate strategy PDF documents directly from a designated GCS bucket (`gs://$GOOGLE_CLOUD_PROJECT_ID-strategy-docs/`), enabling real-time document search and automated PDF RAG processing.
+- 🥗 **Catering Options & Menu Schema in BigQuery via MCP**: Integrate a **BigQuery Model Context Protocol (MCP)** server into `sched_agent` (`scheduling_agent`). This will allow `sched_agent` to query live vendor menus, dietary compatibility flags, and team ordering history stored in BigQuery (`bigquery_dataset.catering_options`) to demonstrate real-world MCP database tool integration.
 
 ---
 
-## 🛠️ Technology Stack
+## 🏛️ Agent Architecture Diagram
 
-- **Code & Pipeline Management**: GitHub Actions & GitHub CLI (`gh`)
-- **Infrastructure as Code**: Terraform (`>= 1.6.0`)
-- **Container Registry**: GCP Artifact Registry
-- **Serverless Hosting**: Google Cloud Run
-- **Container Compilation**: GCP Cloud Build
-- **Application Logic**: Python FastAPI & Uvicorn (Google ADK)
+The following diagram illustrates the multi-agent orchestration workflow. Note that the **Luncher Synthesizer Agent** (`lunch_synthesizer`) is compiled into the same process/binary as the **Luncher Orchestrator** (`luncher_agent`), executing sequentially after parallel info gathering from external A2A sub-agents:
+
+```mermaid
+graph TD
+    User(["👤 User / Client"]) -->|1. Sends Prompt| LuncherProcess
+
+    subgraph LuncherProcess ["👑 Luncher Agent Process (Reasoning Engine / ADK App)"]
+        LuncherSeq["luncher_agent (SequentialAgent)"]
+        ParallelGatherer["parallel_info_gatherer (ParallelAgent)"]
+        Synthesizer["lunch_synthesizer (Agent - Gemini 3.5 Flash)"]
+
+        LuncherSeq -->|Stage 1| ParallelGatherer
+        LuncherSeq -->|Stage 2| Synthesizer
+    end
+
+    subgraph StrategyAgent ["🎯 Strategy Agent (Reasoning Engine)"]
+        StratA2A["A2A Endpoint / App"]
+        StratLLM["Gemini Model"]
+        StratTools["🛠️ Tools:<br/>• inspect_strategy_documents()"]
+        StratA2A --> StratLLM
+        StratLLM --> StratTools
+    end
+
+    subgraph SchedAgent ["📅 Scheduling Agent (Cloud Run Service)"]
+        SchedA2A["A2A FastAPI Endpoint"]
+        SchedLLM["Gemini Model"]
+        SchedTools["🛠️ Tools:<br/>• get_team_members()<br/>• get_catering_options()<br/>• book_meeting()<br/>• update_team_member_preferences()"]
+        SchedA2A --> SchedLLM
+        SchedLLM --> SchedTools
+    end
+
+    GCS[("🗄️ Google Cloud Storage<br/>gs://$PROJECT_ID-strategy-docs/")]
+    BQ[("📊 BigQuery MCP Server<br/>bigquery_dataset.catering_options")]
+
+    ParallelGatherer -->|2a. A2A HTTP Request| StratA2A
+    ParallelGatherer -->|2b. A2A HTTP Request| SchedA2A
+
+    StratTools -->|PDF Document Read| GCS
+    SchedTools -->|Catering & Menu Query| BQ
+
+    StratA2A -->|3a. Strategic Context| ParallelGatherer
+    SchedA2A -->|3b. Availability & Menu Prefs| ParallelGatherer
+
+    ParallelGatherer -->|4. Combined Context Handoff| Synthesizer
+    Synthesizer -->|5. Final Proposal Response| User
+```
 
 ---
 
-## 🚀 Getting Started: Initializing Your Project
+## 📑 Table of Contents
 
-Follow these steps to instantiate your own copy of the project and deploy it to your Google Cloud environment.
+1. [Section 1: Setup & Initialization](#1-setup--initialization)
+2. [Section 2: Running & Testing Agents Locally](#2-running--testing-agents-locally)
+3. [Section 3: Deploying to Cloud & Agent Platform Playground](#3-deploying-to-cloud--agent-platform-playground)
+
+---
+
+## 1. 🛠️ Setup & Initialization
 
 ### 📌 Prerequisites
 
-Ensure you have the following tools installed and authenticated on your local machine (or use **Google Cloud Shell**, which comes with all of these pre-installed):
+Ensure you have the following CLI tools installed on your system:
+- **Google Cloud SDK (`gcloud`)**: [Install Guide](https://cloud.google.com/sdk/docs/install)
+- **Google `agents-cli`**: Install via `pip install agents-cli` or `uv tool install agents-cli`
+- **`uv` Package Manager**: [Install Guide](https://docs.astral.sh/uv/)
 
-1. [Google Cloud SDK (gcloud CLI)](https://cloud.google.com/sdk/docs/install)
-2. [GitHub CLI (gh)](https://github.com/cli/cli#installation)
-3. [Terraform](https://www.terraform.io/downloads.html)
-4. [uv Python Package Manager](https://docs.astral.sh/uv/getting-started/installation/) (`pip install uv` or `curl -LsSf https://astral.sh/uv/install.sh | sh`)
-5. [Google ADK CLI (`adk`)](https://google.github.io/adk/) (`uv tool install google-adk` or `pip install google-adk`)
-
----
-
-### Step 1: Fork and Clone the Repository
-
-1. **Fork** this repository to your own GitHub account or organization.
-2. **Clone** your fork locally and navigate into the directory:
-
+Authenticate `gcloud` before running the setup scripts:
 ```bash
-git clone https://github.com/YOUR-USERNAME-OR-ORG/luncher.git
-cd luncher
-```
-
-3. **Authenticate** your command line tools:
-
-```bash
-# Authenticate gcloud CLI
 gcloud auth login
 gcloud auth application-default login
-
-# Authenticate GitHub CLI (strongly recommended to auto-populate GH Actions variables)
-gh auth login
 ```
 
 ---
 
-### Step 2: Configure Environment Variables (`01-setup-env.sh`)
+### 🛠️ 3-Step Project Setup
 
-Initialize your local configuration by running the interactive setup script. This script will inspect your current active `gcloud` and `git` status to guess sensible defaults, prompt you for confirmation, and save them to a `.env` file.
+Run the following three shell scripts in order from the repository root:
 
+#### Step 1: Configure Environment Variables (`01-setup-env.sh`)
 ```bash
 ./scripts/01-setup-env.sh
 ```
 
-During this step, you will be prompted for:
-- **GitHub owner/organization** (your GitHub username/org name)
-- **GitHub repository name** (e.g. `luncher`)
-- **GCP project ID** (the Google Cloud project you wish to deploy to)
-- **GCP region** (defaults to `us-central1`)
+* **Main Takeaway**: Checks CLI prerequisites (`gcloud`, `agents-cli`, `uv`), prompts for your GCP project credentials, configures `gcloud` defaults, and generates the root `.env` file.
+* **Environment Variables Configured**:
+  | Variable | Description | Default / Example |
+  | :--- | :--- | :--- |
+  | `GOOGLE_GENAI_USE_VERTEXAI` | Forces Google GenAI SDK to route via Gemini Enterprise Agent Platform (GEAP) rather than Google AI Studio | `"true"` |
+  | `GOOGLE_CLOUD_PROJECT_ID` | Your target Google Cloud Project ID | `"your-gcp-project-id"` |
+  | `GOOGLE_CLOUD_LOCATION` | Primary GCP deployment region | `"us-central1"` |
 
 ---
 
-### Step 3: Enable Google Cloud APIs (`02-init-api.sh`)
-
-Enable all of the required Google Cloud API services in your target GCP project:
-
+#### Step 2: Enable Google Cloud APIs (`02-init-api.sh`)
 ```bash
 ./scripts/02-init-api.sh
 ```
 
+* **Main Takeaway**: Enables all required Google Cloud API services in your GCP project.
+* **Enabled APIs Summary**:
+  | API Service | Purpose |
+  | :--- | :--- |
+  | `aiplatform.googleapis.com` | Gemini Enterprise Agent Platform (GEAP) Agent Runtime & Reasoning Engines |
+  | `run.googleapis.com` | Cloud Run serverless container hosting for agents |
+  | `artifactregistry.googleapis.com` | Container image storage repository |
+  | `cloudbuild.googleapis.com` | Cloud Build automated container image compilation |
+  | `iam.googleapis.com` | Identity and Access Management service |
+  | `cloudresourcemanager.googleapis.com` | GCP Project metadata & policy management |
+  | `storage.googleapis.com` | Google Cloud Storage buckets for PDF documents and artifacts |
+  | `serviceusage.googleapis.com` | Service usage API management |
+  | `servicecontrol.googleapis.com` | Control plane reporting for GCP services |
+
 ---
 
-### Step 4: Setup Workload Identity & Service Account (`03-setup-github-actions.sh`)
-
-This script creates a secure GCP service account, initializes a global Workload Identity Pool, configures an OIDC provider mapped specifically to your GitHub fork, and **automates the setting of GitHub Actions Repository Variables** using the `gh` CLI!
-
+#### Step 3: Configure IAM Permissions (`03-setup-iam.sh`)
 ```bash
-./scripts/03-setup-github-actions.sh
+./scripts/03-setup-iam.sh
 ```
 
-> [!NOTE]
-> The setup scripts automatically configure `GCP_AUTHORIZED_DOMAIN` (defaults to `google.com`). If you need to update your authorized domain for Cloud Run in GitHub Actions, run:
-> ```bash
-> gh variable set GCP_AUTHORIZED_DOMAIN --body "your-domain.com"
-> ```
-> If your `gh` CLI is not authenticated, you can manually set the variables in your GitHub Repository settings (**Settings > Secrets and variables > Actions > Variables**).
+* **Main Takeaway**: Grants necessary project-level IAM roles to Google Cloud runtime service accounts so agents, container runtimes, and build pipelines can execute seamlessly.
+* **Service Accounts & Granted IAM Roles**:
+
+  ##### 1. Gemini Enterprise Agent Platform (GEAP) Reasoning Engine Service Agent
+  `service-${PROJECT_NUMBER}@gcp-sa-aiplatform-re.iam.gserviceaccount.com`
+  - **`roles/aiplatform.user`** (*Agent Platform User*): Allows Reasoning Engine to execute models and manage sessions.
+  - **`roles/agentregistry.viewer`** (*Agent Registry API Viewer*): Allows agent card discovery across registered A2A sub-agents.
+  - **`roles/run.invoker`** (*Cloud Run Invoker*): Allows Reasoning Engine to invoke sub-agents deployed on Cloud Run.
+  - **`roles/aiplatform.reasoningEngineServiceAgent`** (*Gemini Enterprise Agent Platform Reasoning Engine Service Agent*): Standard Reasoning Engine operational role.
+
+  ##### 2. Compute Service Account (Cloud Run Runtime)
+  `${PROJECT_NUMBER}-compute@developer.gserviceaccount.com`
+  - **`roles/storage.admin`** (*Storage Admin*): Access strategy document PDFs and GCS log artifacts.
+  - **`roles/artifactregistry.admin`** (*Artifact Registry Admin*): Pull container images for Cloud Run.
+  - **`roles/logging.logWriter`** (*Logs Writer*): Write agent trace logs and telemetry to Cloud Logging.
+  - **`roles/run.invoker`** (*Cloud Run Invoker*): Allows Cloud Run agent instances to invoke peer A2A Cloud Run services.
+
+  ##### 3. Cloud Build Service Account
+  `${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com`
+  - **`roles/artifactregistry.admin`** (*Artifact Registry Admin*): Push built container images to Artifact Registry.
 
 ---
 
-### Step 5: Grant IAM Permissions (`04-setup-iam.sh`)
+## 2. 💻 Running & Testing Agents Locally
 
-Grant your newly created GitHub Actions Service Account the minimum-privilege IAM roles required to provision and manage network, storage, and serverless resources:
+To test the multi-agent orchestration locally, start the two sub-agents in background terminals, then launch the primary orchestrator in interactive web playground mode (or CLI mode). All commands execute directly from the repository root.
+
+### Step 1: Start the Sub-Agents
+
+Open **2 separate terminal windows/tabs** to start the Strategy and Scheduling sub-agents from root:
 
 ```bash
-./scripts/04-setup-iam.sh
+# Terminal 1: Start Strategy Agent (Port 8081)
+uv --directory agents/strat_agent run main.py
+
+# Terminal 2: Start Scheduling Agent (Port 8082)
+uv --directory agents/sched_agent run main.py
 ```
 
 ---
 
-### Step 6: Create State Bucket & Configure tfvars (`05-setup-tf.sh`)
+### Step 2: Launch Orchestrator Agent in Interactive Mode
 
-Create the Google Cloud Storage bucket used to store your Terraform remote state file securely, copy `terraform/terraform.tfvars.example` to `terraform/terraform.tfvars`, and automatically inject your configured environment values:
+With the sub-agents running, open a **3rd terminal window** to launch the Luncher Orchestrator from root:
 
+#### Option A: Interactive ADK Web Playground (`adk web`)
 ```bash
-./scripts/05-setup-tf.sh
+# Terminal 3: Launch ADK Web UI for Luncher Orchestrator (Port 8080)
+uv --directory agents/luncher_agent run adk web app --port 8080
+```
+1. Open **`http://localhost:8080`** in your browser.
+2. Enter prompts such as:
+   > *"Plan a team lunch meeting for next week that aligns with our corporate strategy."*
+3. Watch the orchestrator delegate tasks to the Strategy (Port 8081) and Scheduling (Port 8082) sub-agents in real time.
+
+#### Option B: Terminal CLI (`agents-cli run`)
+Alternatively, run the orchestrator interactively from your terminal:
+```bash
+uv run agents-cli run agents/luncher_agent "Plan a team lunch meeting for next week"
 ```
 
 ---
 
-## 🏗️ Deployment Walkthrough
+## 3. ☁️ Deploying to Cloud & Agent Platform Playground
 
-Once your environment is configured, the rest of the deployment is managed entirely through **GitHub Actions** in your fork!
+Once tested locally, deploy your agents to **Gemini Enterprise Agent Platform (GEAP) Agent Runtime** or **Cloud Run** and interact with them in the Cloud Console. All deployment commands below execute directly from the repository root.
 
-### 📡 Phase 1: Deploy Infrastructure
+### Step 1: Deploying Agents to Google Cloud
 
-1. Navigate to the **Actions** tab of your forked GitHub repository.
-2. Select the **Terraform Deployment** workflow from the sidebar.
-3. Click the **Run workflow** dropdown and trigger the workflow on the `main` branch.
-4. This workflow will authenticate via Workload Identity, initialize Terraform pointing to your secure GCS bucket, and provision:
-   - An Artifact Registry Docker repository (`luncher-repo`).
-   - A secure Google Cloud Run service (`luncher-service`) pre-initialized with a standard public hello-world placeholder image.
-   - Fully open public IAM ingress bindings so the service is unauthenticated.
+In this multi-agent architecture:
+- 🎯 **Strategy Agent** (`strat_agent`) & 👑 **Luncher Orchestrator** (`luncher_agent`) deploy to **Gemini Enterprise Agent Platform (GEAP) Agent Runtime**.
+- 📅 **Scheduling Agent** (`sched_agent`) specifically deploys as a containerized service on **Cloud Run**.
 
----
+```bash
+# Source environment variables first
+source .env
 
-### 📦 Phase 2: Build & Deploy Application
+# 1. Deploy Strategy Agent (Agent Runtime)
+(cd agents/strat_agent && agents-cli deploy --project $GOOGLE_CLOUD_PROJECT_ID --region $GOOGLE_CLOUD_LOCATION)
 
-Once your infrastructure is ready, you can build and deploy your customized Flask application:
+# 2. Deploy Scheduling Agent (Cloud Run)
+(cd agents/sched_agent && agents-cli deploy --deployment-target cloud_run --project $GOOGLE_CLOUD_PROJECT_ID --region $GOOGLE_CLOUD_LOCATION)
 
-1. In the **Actions** tab, select the **Continuous Delivery** workflow.
-2. Click **Run workflow** and trigger the deployment.
-3. This workflow will:
-   - Authenticate to your GCP project.
-   - Run a Cloud Build trigger inside GCP to securely compile and tag the Python container.
-   - Push the container image to your Artifact Registry.
-   - Execute a `terraform apply` step, passing the newly compiled container image path into your Terraform configurations, updating the Cloud Run container securely, and providing your live public URL!
+# 3. Deploy Luncher Orchestrator (Agent Runtime)
+(cd agents/luncher_agent && agents-cli deploy --project $GOOGLE_CLOUD_PROJECT_ID --region $GOOGLE_CLOUD_LOCATION)
+```
 
 ---
 
-## 🤖 Interacting with Deployed Agents
+### Step 2: Testing in the Agent Platform Playground & Console
 
-Once deployed to Cloud Run or Vertex AI Reasoning Engine, you can interact with the multi-agent orchestrator using the official Google ADK `agents-cli` tool or directly via A2A endpoints:
+After deployment, explore and interact with your live agents in the Google Cloud Console:
 
-### 1. Interactive Terminal Chat (`adk` & `agents-cli`)
+1. **Gemini Enterprise Agent Platform (GEAP) Playground**:
+   - Go to **GCP Console > Gemini Enterprise Agent Platform (GEAP) > Reasoning Engines**.
+   - Select your deployed `luncher_agent` instance.
+   - Use the built-in **Test Playground** pane to send prompts and inspect multi-agent orchestration responses in real time.
 
-* **Run Agent Locally (`adk run`):**
-  ```bash
-  cd agents/luncher_agent && \
-  uv run adk run . "Plan a team lunch meeting for next week"
-  ```
+2. **Agent Registry (Beta)**:
+   - Go to **GCP Console > Gemini Enterprise Agent Platform (GEAP) > Agent Registry**.
+   - View registered A2A agent cards, capabilities, and open endpoints.
 
-* **Run Local Web UI Playground (`adk web`):**
-  ```bash
-  cd agents/luncher_agent && \
-  uv run adk web .
-  ```
-
-* **Query Deployed Cloud Run Agent (`agents-cli run`):**
-  ```bash
-  cd agents/luncher_agent && \
-  uv run agents-cli run --mode a2a \
-    --url https://<YOUR_CLOUD_RUN_URL> \
-    "Plan a team lunch meeting for next week"
-  ```
+3. **Cloud Observability & Execution Traces**:
+   - Go to **GCP Console > Logging > Log Explorer** or **Cloud Trace**.
+   - View detailed execution logs, span attributes, and reasoning steps for each agent turn.
 
 ---
 
-### 2. A2A Protocol Endpoints
+## 🗑️ Cleanup
 
-* **Agent Card Discovery URL:**  
-  `https://<YOUR_CLOUD_RUN_URL>/.well-known/agent-card.json`
+To delete deployed cloud resources and prevent ongoing charges, run the cleanup commands using your environment variables:
 
-* **JSON-RPC Endpoint:**  
-  `https://<YOUR_CLOUD_RUN_URL>`
+```bash
+source .env
 
-### 3. Accessing the ADK Web UI & Authenticated Proxy (`gcloud run services proxy`)
+# 1. Delete Scheduling Agent (Cloud Run)
+gcloud run services delete sched-agent --region $GOOGLE_CLOUD_LOCATION --project $GOOGLE_CLOUD_PROJECT_ID --quiet
 
-* **Public Web Playground:**
-  Open `https://<YOUR_CLOUD_RUN_URL>/dev-ui/` directly in your browser.
-
-* **Authenticated Local Tunnel (`gcloud run services proxy`):**
-  If IAM authentication or domain restrictions are enabled on Cloud Run, launch an authenticated proxy tunnel to pass Google credentials automatically.
-
-  You can retrieve the exact proxy command for your deployment from Terraform:
-  ```bash
-  cd terraform && terraform output -raw proxy_command
-  ```
-  Or run `gcloud` directly:
-  ```bash
-  gcloud run services proxy luncher-service --region us-central1 --project YOUR_PROJECT_ID
-  ```
-  Then open `http://localhost:8080/dev-ui/` in your browser.
-
-
-## 🧼 Cleanup
-
-To avoid ongoing charges, you can easily tear down all of the resources deployed in Google Cloud:
-
-1. Go to your GitHub Fork's **Actions** tab.
-2. Select the **Terraform DESTROY** workflow.
-3. Click **Run workflow** and run it to automatically delete all Artifact Registry resources, public IAM bindings, and active Cloud Run service deployments in a single step!
+# 2. Delete Strategy Agent & Luncher Orchestrator (Reasoning Engines)
+gcloud ai reasoning-engines list --region $GOOGLE_CLOUD_LOCATION --project $GOOGLE_CLOUD_PROJECT_ID
+```

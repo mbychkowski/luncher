@@ -12,157 +12,161 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import os
-import httpx
-import google.auth.transport.requests
-import google.oauth2.id_token
 from dotenv import load_dotenv
-from a2a.types import AgentCard, AgentCapabilities
-from google.adk.agents import Agent
+import vertexai
+
+import httpx
+import google.auth
+from google.auth.transport.requests import Request
+
+from google.adk.agents import Agent, ParallelAgent, SequentialAgent
 from google.adk.agents.remote_a2a_agent import RemoteA2aAgent
-from google.adk.tools import AgentTool
+from google.adk.apps.app import App
+from google.adk.models.google_llm import Gemini
+from google.genai.types import HttpRetryOptions
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
 
-def resolve_subagent_url(env_var_name: str, display_name: str, default_local: str) -> str:
-    """Resolve subagent URL from env var, or dynamically from Vertex AI by display_name."""
-    url = os.getenv(env_var_name)
-    if url:
-        return url
-        
-    project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
-    location = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
-    
-    if project_id:
+# Gemini Enterprise Agent Platform (GEAP) & GCP Project configuration
+PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT_ID")
+LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "True"
+
+vertexai.init(project=PROJECT_ID, location=LOCATION)
+
+
+def _get_auth_headers(url: str) -> dict[str, str]:
+    headers = {}
+    if "aiplatform.googleapis.com" in url:
         try:
-            import vertexai
-            from vertexai.preview import reasoning_engines
-            vertexai.init(project=project_id, location=location)
-            engines = reasoning_engines.ReasoningEngine.list()
-            for e in engines:
-                if e.display_name == display_name:
-                    resource = e.resource_name if e.resource_name.endswith(":query") else f"{e.resource_name}:query"
-                    discovered = f"https://{location}-aiplatform.googleapis.com/v1/{resource}"
-                    print(f"[luncher_agent] Discovered {display_name} URL: {discovered}")
-                    return discovered
-        except Exception as err:
-            print(f"[luncher_agent] Dynamic discovery for {display_name} failed: {err}")
-            
-    return default_local
+            creds, _ = google.auth.default()
+            req = Request()
+            creds.refresh(req)
+            if creds.token:
+                headers["Authorization"] = f"Bearer {creds.token}"
+        except Exception as e:
+            logger.warning(f"Could not fetch OAuth access token for {url}: {e}")
+    elif "run.app" in url:
+        target_audience = url.split("/a2a")[0].split("/.well-known")[0]
+        # First try Compute Metadata Server (active on Cloud Run & Agent Runtime)
+        try:
+            meta_url = f"http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience={target_audience}"
+            meta_resp = httpx.get(meta_url, headers={"Metadata-Flavor": "Google"}, timeout=5.0)
+            if meta_resp.status_code == 200 and meta_resp.text:
+                headers["Authorization"] = f"Bearer {meta_resp.text.strip()}"
+                return headers
+        except Exception:
+            pass
 
-# Retrieve remote agent URLs dynamically on GCP or default to standard local ports
-STRAT_AGENT_URL = resolve_subagent_url("STRAT_AGENT_URL", "strat-agent", "http://localhost:8080")
-SCHED_AGENT_URL = resolve_subagent_url("SCHED_AGENT_URL", "sched-agent", "http://localhost:8081")
+        # Fallback to id_token or OAuth token
+        try:
+            from google.oauth2 import id_token
+            req = Request()
+            token = id_token.fetch_id_token(req, target_audience)
+            headers["Authorization"] = f"Bearer {token}"
+        except Exception:
+            try:
+                creds, _ = google.auth.default()
+                creds.refresh(Request())
+                if creds.token:
+                    headers["Authorization"] = f"Bearer {creds.token}"
+            except Exception as e:
+                logger.warning(f"Could not fetch auth token for Cloud Run {url}: {e}")
+    return headers
 
-def get_agent_card_url(base_url: str) -> str:
-    if "v1/card" in base_url or base_url.endswith(".json"):
-        return base_url
-    return f"{base_url.rstrip('/')}/.well-known/agent-card.json"
 
-def fetch_agent_card(base_url: str) -> str | AgentCard:
-    """Fetch agent card with authentication if targeting a GCP Cloud Run endpoint."""
-    if "localhost" in base_url or "0.0.0.0" in base_url:
-        return base_url
+def discover_sub_agent(
+    agent_name: str,
+    default_local_url: str,
+    description: str,
+) -> RemoteA2aAgent:
+    """Instantiates a RemoteA2aAgent using direct agent card URLs.
 
-    # Reasoning Engine endpoints do not serve agent-card.json; return explicit AgentCard
-    if "aiplatform.googleapis.com" in base_url:
-        return AgentCard(
-            name="remote_reasoning_engine",
-            description="Remote Vertex AI Reasoning Engine sub-agent",
-            url=base_url,
-            version="1.0",
-            default_input_modes=["text"],
-            default_output_modes=["text"],
-            capabilities=AgentCapabilities(),
-            skills=[],
-        )
-        
-    card_url = get_agent_card_url(base_url)
-    auth_req = google.auth.transport.requests.Request()
-    id_token = google.oauth2.id_token.fetch_id_token(auth_req, base_url)
-    headers = {"Authorization": f"Bearer {id_token}"}
-        
-    resp = httpx.get(card_url, headers=headers)
-    resp.raise_for_status()
-    return AgentCard.model_validate(resp.json())
+    Checks environment variable {AGENT_NAME}_URL (e.g. STRATEGY_AGENT_URL),
+    falling back to default_local_url for local offline development.
+    """
+    env_url_var = f"{agent_name.upper()}_URL"
+    agent_url = os.getenv(env_url_var, default_local_url)
+    logger.info(f"Connecting '{agent_name}' using direct URL: {agent_url}")
 
-def get_httpx_client(base_url: str) -> httpx.AsyncClient | None:
-    """Create authenticated httpx.AsyncClient for outbound A2A RPC calls."""
-    if "aiplatform.googleapis.com" in base_url:
-        auth_req = google.auth.transport.requests.Request()
-        credentials, _ = google.auth.default()
-        credentials.refresh(auth_req)
-        return httpx.AsyncClient(timeout=60.0, headers={"Authorization": f"Bearer {credentials.token}"})
-    elif not ("localhost" in base_url or "0.0.0.0" in base_url):
-        auth_req = google.auth.transport.requests.Request()
-        id_token = google.oauth2.id_token.fetch_id_token(auth_req, base_url)
-        return httpx.AsyncClient(timeout=60.0, headers={"Authorization": f"Bearer {id_token}"})
-    return None
+    headers = _get_auth_headers(agent_url)
+    client = httpx.AsyncClient(headers=headers, timeout=120.0) if headers else httpx.AsyncClient(timeout=120.0)
 
-import sys
-
-# Ensure repository root is on sys.path for sub-agent imports
-current_file = os.path.abspath(__file__)
-repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file))))
-if repo_root not in sys.path:
-    sys.path.insert(0, repo_root)
-
-# Resolve sub-agent tools (in-process or remote A2A connectors)
-try:
-    from agents.strat_agent.main import strategy_agent
-    from agents.sched_agent.main import scheduling_agent
-    print("[luncher_agent] Loaded strategy_agent and scheduling_agent in-process.")
-    strat_tool = AgentTool(strategy_agent)
-    sched_tool = AgentTool(scheduling_agent)
-except Exception as err:
-    print(f"[luncher_agent] Falling back to remote A2A connectors: {err}")
-    strategy_agent_connector = RemoteA2aAgent(
-        name="strategy_agent",
-        description="Inspects and synthesizes corporate strategy PDF documents to extract business constraints and priorities.",
-        agent_card=fetch_agent_card(STRAT_AGENT_URL),
-        httpx_client=get_httpx_client(STRAT_AGENT_URL),
+    return RemoteA2aAgent(
+        name=agent_name,
+        description=description,
+        agent_card=agent_url,
+        httpx_client=client,
+        timeout=120.0,
     )
 
-    scheduling_agent_connector = RemoteA2aAgent(
-        name="scheduling_agent",
-        description="Interactively schedules team meetings, checks dietary preferences/schedules, and books catering.",
-        agent_card=fetch_agent_card(SCHED_AGENT_URL),
-        httpx_client=get_httpx_client(SCHED_AGENT_URL),
-    )
-    strat_tool = AgentTool(strategy_agent_connector)
-    sched_tool = AgentTool(scheduling_agent_connector)
 
-from google.adk.models.google_llm import Gemini
-from google.genai.types import HttpRetryOptions
+# Discover sub-agents (Strategy Agent and Scheduling Agent)
+strategy_agent = discover_sub_agent(
+    agent_name="strategy_agent",
+    default_local_url="http://localhost:8081/a2a/app/.well-known/agent-card.json",
+    description=(
+        "Analyzes GeniCo corporate strategy and product initiative roadmaps (e.g. OmniChef, "
+        "VisionSphere, PowerGrid Home). Consult this agent for strategic context and launch schedules."
+    ),
+)
+
+scheduling_agent = discover_sub_agent(
+    agent_name="scheduling_agent",
+    default_local_url="http://localhost:8082/a2a/app/.well-known/agent-card.json",
+    description=(
+        "Helps coordinate meeting times and catering food preferences across team members interactively."
+    ),
+)
 
 default_retry_policy = HttpRetryOptions(
     attempts=5,
     initial_delay=2.0,
     max_delay=30.0,
-    http_status_codes=[429, 500, 503]
+    http_status_codes=[429, 500, 503],
 )
 
-# Define the central Luncher Orchestrator
-luncher_agent = Agent(
-    model=Gemini(model="gemini-2.5-flash", retry_options=default_retry_policy),
+# Stage 1: Gather corporate strategy and scheduling options concurrently
+parallel_sub_agents = ParallelAgent(
+    name="parallel_info_gatherer",
+    description="Gathers corporate strategy context and team availability concurrently.",
+    sub_agents=[strategy_agent, scheduling_agent],
+)
+
+# Stage 2: Synthesize findings into a strategy-aligned lunch proposal
+synthesizer_agent = Agent(
+    model=Gemini(model="gemini-3.5-flash", retry_options=default_retry_policy),
+    name="lunch_synthesizer",
+    description="Synthesizes corporate strategy objectives and scheduling options into a team lunch proposal.",
+    instruction=(
+        "You are the central Luncher Synthesizer Agent. You will receive context containing strategic corporate priorities "
+        "and team schedule/dietary preferences.\n\n"
+        "YOUR ROLE:\n"
+        "- Synthesize the strategic priorities (e.g. OmniChef launch, VisionSphere) and scheduling availability into a single cohesive response.\n"
+        "- Frame the proposed team lunch around the identified strategic objectives (e.g., 'To align with our strategy on the OmniChef launch, I recommend...').\n"
+        "- Present clear time slots and catering recommendations matching team preferences."
+    ),
+)
+
+# Root Orchestrator: Sequential workflow executing parallel gathering followed by synthesis
+luncher_agent = SequentialAgent(
     name="luncher_agent",
     description="The centralized Luncher Orchestrator that coordinates strategy-aligned team lunch meetings.",
-    instruction=(
-        "You are the central Luncher Orchestrator Agent. Your job is to act as the primary user-facing frontend "
-        "to schedule team lunches that are strategically aligned with corporate priorities.\n\n"
-        
-        "Your available tools:\n"
-        "1. 'strategy_agent' - Use this to retrieve corporate strategic objectives, launch dates, or corporate priorities.\n"
-        "2. 'scheduling_agent' - Use this to manage team schedules, check/update dietary preferences, and finalize bookings.\n\n"
-        
-        "COORDINATION PROTOCOL:\n"
-        "- When a user asks you to plan/schedule a team lunch or meeting, you MUST ALWAYS consult the strategy_agent first to identify any relevant corporate priorities or initiatives.\n"
-        "- Next, delegate to the scheduling_agent to identify the optimal overlapping time slot and catering options for the team based on those priorities.\n"
-        "- Synthesize the information into a single cohesive response, framing the lunch proposal around the identified strategic objectives (e.g., 'To align with our strategy on the OmniChef launch, I recommend...').\n"
-        "- If the user accepts, delegate the final booking execution to the scheduling_agent."
-    ),
-    tools=[strat_tool, sched_tool]
+    sub_agents=[parallel_sub_agents, synthesizer_agent],
 )
 
 root_agent = luncher_agent
+
+app = App(
+    name="luncher_agent",
+    root_agent=root_agent,
+)
+
+

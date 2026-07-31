@@ -65,7 +65,6 @@ fi
 
 echo "Setting gcloud defaults..."
 gcloud config set project "${GOOGLE_CLOUD_PROJECT_ID}" >/dev/null 2>&1
-gcloud config set compute/region "${GOOGLE_CLOUD_LOCATION}" >/dev/null 2>&1
 
 cat << EOF > .env
 export GOOGLE_GENAI_USE_VERTEXAI="true"

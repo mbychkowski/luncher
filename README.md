@@ -185,7 +185,7 @@ With the sub-agents running, open a **3rd terminal window** to launch the Lunche
 #### Option A: Interactive ADK Web Playground (`adk web`)
 ```bash
 # Terminal 3: Launch ADK Web UI for Luncher Orchestrator (Port 8080)
-uv run adk web agents/luncher_agent --port 8080
+uv --directory agents/luncher_agent run adk web app --port 8080
 ```
 1. Open **`http://localhost:8080`** in your browser.
 2. Enter prompts such as:

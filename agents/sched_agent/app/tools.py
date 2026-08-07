@@ -11,6 +11,17 @@ MEMBERS_FILE = os.path.join(DATA_DIR, "team_members.json")
 BOOKINGS_FILE = os.path.join(DATA_DIR, "booked_meetings.json")
 
 
+def ensure_bookings_file() -> None:
+    """Ensures that the booked_meetings.json file and its parent directory exist on the fly."""
+    os.makedirs(os.path.dirname(BOOKINGS_FILE), exist_ok=True)
+    if not os.path.exists(BOOKINGS_FILE):
+        try:
+            with open(BOOKINGS_FILE, "w") as f:
+                json.dump([], f, indent=2)
+        except Exception as e:
+            print(f"[Scheduling Agent] Error initializing {BOOKINGS_FILE}: {e}")
+
+
 def get_team_members() -> list[dict]:
     """Loads and returns the team members' profiles, schedules, and preferences.
 
@@ -38,7 +49,7 @@ def book_meeting(time_slot: str, restaurant: str, reason: str = "") -> str:
     """
     print(f"[Scheduling Agent] Finalizing booking: {time_slot} with catering from {restaurant}...")
     try:
-        os.makedirs(os.path.dirname(BOOKINGS_FILE), exist_ok=True)
+        ensure_bookings_file()
         bookings = []
         if os.path.exists(BOOKINGS_FILE):
             with open(BOOKINGS_FILE, "r") as f:

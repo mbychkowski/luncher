@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from dotenv import load_dotenv
 from google.adk.agents import Agent
 from google.adk.apps import App
@@ -43,8 +44,14 @@ sched_retry_policy = types.HttpRetryOptions(
     http_status_codes=[429, 500, 503],
 )
 
+MODEL_LOCATION = os.getenv("GOOGLE_GENAI_LOCATION", "global")
+
 root_agent = Agent(
-    model=Gemini(model="gemini-3.5-flash", retry_options=sched_retry_policy),
+    model=Gemini(
+        model="gemini-3.5-flash",
+        retry_options=sched_retry_policy,
+        client_kwargs={"location": MODEL_LOCATION},
+    ),
     name="scheduling_agent",
     description="Helps coordinate meeting times and catering food preferences across team members interactively.",
     instruction=(

@@ -1,7 +1,7 @@
 {
-  "remote_agent_runtime_id": "projects/885745030124/locations/us-central1/reasoningEngines/4627960439785914368",
+  "remote_agent_runtime_id": "projects/538583880872/locations/us-central1/reasoningEngines/3015671773187276800",
   "deployment_target": "agent_runtime",
   "is_a2a": true,
   "agent_directory": ".",
-  "deployment_timestamp": "2026-07-31T20:19:29.502822+00:00"
+  "deployment_timestamp": "2026-08-07T17:35:20.535433+00:00"
 }

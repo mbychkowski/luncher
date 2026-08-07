@@ -92,8 +92,14 @@ strat_retry_policy = HttpRetryOptions(
     http_status_codes=[429, 500, 503],
 )
 
+MODEL_LOCATION = os.getenv("GOOGLE_GENAI_LOCATION", "global")
+
 root_agent = Agent(
-    model=Gemini(model="gemini-3.5-flash", retry_options=strat_retry_policy),
+    model=Gemini(
+        model="gemini-3.5-flash",
+        retry_options=strat_retry_policy,
+        client_kwargs={"location": MODEL_LOCATION},
+    ),
     name="strategy_agent",
     description="Analyzes corporate strategy documents and returns a brief strategic summary.",
     instruction=(

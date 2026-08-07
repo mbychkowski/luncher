@@ -33,7 +33,7 @@ fi
 
 echo "Enabling Google Cloud APIs for project ${GOOGLE_CLOUD_PROJECT_ID}..."
 
-# Enable APIs needed for Container Building, Artifact Registry, Cloud Run, and Gemini Enterprise Agent Platform (GEAP)
+# Enable APIs needed for Container Building, Artifact Registry, Cloud Run, Gemini Enterprise Agent Platform (GEAP), and BigQuery
 for GOOGLE_CLOUD_API in \
   compute.googleapis.com \
   artifactregistry.googleapis.com \
@@ -45,6 +45,7 @@ for GOOGLE_CLOUD_API in \
   serviceusage.googleapis.com \
   storage.googleapis.com \
   aiplatform.googleapis.com \
+  bigquery.googleapis.com \
     ; do
   echo "Enabling ${GOOGLE_CLOUD_API}..."
   gcloud services enable --project "${GOOGLE_CLOUD_PROJECT_ID}" "${GOOGLE_CLOUD_API}"
@@ -55,3 +56,35 @@ echo "Google Cloud APIs successfully enabled."
 gcloud config set compute/region "${GOOGLE_CLOUD_LOCATION}" >/dev/null 2>&1
 
 echo "Google Cloud default region set to ${GOOGLE_CLOUD_LOCATION}"
+
+# ==============================================================================
+# BigQuery Dataset & Menu Data Initialization
+# ==============================================================================
+BIGQUERY_LOCATION="${BIGQUERY_LOCATION:-US}"
+DATASET_ID="catering"
+TABLE_ID="menu_items"
+MENU_DATA_FILE="data/catering/catering_menu.json"
+
+echo "Initializing BigQuery dataset '${DATASET_ID}' in location '${BIGQUERY_LOCATION}'..."
+if bq show --dataset "${GOOGLE_CLOUD_PROJECT_ID}:${DATASET_ID}" >/dev/null 2>&1; then
+  echo "Dataset '${GOOGLE_CLOUD_PROJECT_ID}:${DATASET_ID}' already exists."
+else
+  echo "Creating dataset '${GOOGLE_CLOUD_PROJECT_ID}:${DATASET_ID}'..."
+  bq mk --dataset \
+    --location="${BIGQUERY_LOCATION}" \
+    --description="Catering options and menu items" \
+    "${GOOGLE_CLOUD_PROJECT_ID}:${DATASET_ID}"
+fi
+
+if [ -f "${MENU_DATA_FILE}" ]; then
+  echo "Populating BigQuery table '${DATASET_ID}.${TABLE_ID}' from ${MENU_DATA_FILE}..."
+  bq load \
+    --replace \
+    --source_format=NEWLINE_DELIMITED_JSON \
+    --autodetect \
+    "${GOOGLE_CLOUD_PROJECT_ID}:${DATASET_ID}.${TABLE_ID}" \
+    "${MENU_DATA_FILE}"
+  echo "BigQuery table '${DATASET_ID}.${TABLE_ID}' successfully populated."
+else
+  echo "Warning: Catering menu data file '${MENU_DATA_FILE}' not found. Skipping table population."
+fi

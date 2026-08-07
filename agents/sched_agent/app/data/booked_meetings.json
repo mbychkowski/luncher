@@ -61,5 +61,40 @@
     "catering_restaurant": "Fiesta Tacos",
     "reason": "Test booking",
     "booked_at": "2026-07-31T19:45:23.389684"
+  },
+  {
+    "booking_id": "bk_1786130013",
+    "time_slot": "Monday 10:00-11:00 AM",
+    "catering_restaurant": "Fiesta Tacos",
+    "reason": "Test booking",
+    "booked_at": "2026-08-07T15:13:33.394054"
+  },
+  {
+    "booking_id": "bk_1786130061",
+    "time_slot": "Monday 10:00-11:00 AM",
+    "catering_restaurant": "Fiesta Tacos",
+    "reason": "Test booking",
+    "booked_at": "2026-08-07T15:14:21.343384"
+  },
+  {
+    "booking_id": "bk_1786130191",
+    "time_slot": "Monday 10:00-11:00 AM",
+    "catering_restaurant": "Fiesta Tacos",
+    "reason": "Test booking",
+    "booked_at": "2026-08-07T15:16:31.627462"
+  },
+  {
+    "booking_id": "bk_1786130196",
+    "time_slot": "Monday 10:00-11:00 AM",
+    "catering_restaurant": "Fiesta Tacos",
+    "reason": "Test booking",
+    "booked_at": "2026-08-07T15:16:36.776305"
+  },
+  {
+    "booking_id": "bk_1786130357",
+    "time_slot": "Monday 10:00-11:00 AM",
+    "catering_restaurant": "Fiesta Tacos",
+    "reason": "Test booking",
+    "booked_at": "2026-08-07T15:19:17.162152"
   }
 ]

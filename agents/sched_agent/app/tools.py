@@ -8,7 +8,6 @@ _CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.getenv("DATA_DIR", os.path.join(_CURRENT_DIR, "data"))
 
 MEMBERS_FILE = os.path.join(DATA_DIR, "team_members.json")
-CATERING_FILE = os.path.join(DATA_DIR, "catering_options.json")
 BOOKINGS_FILE = os.path.join(DATA_DIR, "booked_meetings.json")
 
 
@@ -26,22 +25,6 @@ def get_team_members() -> list[dict]:
         return []
     except Exception as e:
         print(f"[Scheduling Agent] Error reading {MEMBERS_FILE}: {e}")
-        return []
-
-
-def get_catering_options() -> list[dict]:
-    """Loads and returns the available catering and local restaurant options.
-
-    Includes restaurant name, cuisine type, rating, and dietary tags (e.g., Gluten-Free, Vegetarian, Vegan, Halal).
-    """
-    print("[Scheduling Agent] Fetching catering options...")
-    try:
-        if os.path.exists(CATERING_FILE):
-            with open(CATERING_FILE, "r") as f:
-                return json.load(f)
-        return []
-    except Exception as e:
-        print(f"[Scheduling Agent] Error reading {CATERING_FILE}: {e}")
         return []
 
 

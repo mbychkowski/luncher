@@ -37,6 +37,7 @@ load_dotenv()
 # Gemini Enterprise Agent Platform (GEAP) & GCP Project configuration
 PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT_ID")
 LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+MODEL_LOCATION = os.getenv("GOOGLE_GENAI_LOCATION", "global")
 os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "True"
 
 vertexai.init(project=PROJECT_ID, location=LOCATION)
@@ -142,7 +143,11 @@ parallel_sub_agents = ParallelAgent(
 
 # Stage 2: Synthesize findings into a strategy-aligned lunch proposal
 synthesizer_agent = Agent(
-    model=Gemini(model="gemini-3.5-flash", retry_options=default_retry_policy),
+    model=Gemini(
+        model="gemini-3.5-flash",
+        retry_options=default_retry_policy,
+        client_kwargs={"location": MODEL_LOCATION},
+    ),
     name="lunch_synthesizer",
     description="Synthesizes corporate strategy objectives and scheduling options into a team lunch proposal.",
     instruction=(

@@ -107,7 +107,8 @@ Run the following three shell scripts in order from the repository root:
   | :--- | :--- | :--- |
   | `GOOGLE_GENAI_USE_VERTEXAI` | Forces Google GenAI SDK to route via Gemini Enterprise Agent Platform (GEAP) rather than Google AI Studio | `"true"` |
   | `GOOGLE_CLOUD_PROJECT_ID` | Your target Google Cloud Project ID | `"your-gcp-project-id"` |
-  | `GOOGLE_CLOUD_LOCATION` | Primary GCP deployment region | `"us-central1"` |
+  | `GOOGLE_CLOUD_LOCATION` | Primary GCP deployment region (Cloud Run, Reasoning Engine) | `"us-central1"` |
+  | `GOOGLE_GENAI_LOCATION` | Location for Vertex AI Gemini model inference API calls | `"global"` |
 
 ---
 

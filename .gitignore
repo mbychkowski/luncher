@@ -40,7 +40,8 @@ share/python-wheels/
 .DS_Store
 Thumbs.db
 
-# ADK (Agent Development Kit) Local Storage
+# ADK (Agent Development Kit) Local Storage & Deployment Metadata
 .adk/
 .adk
-
+deployment_metadata.json
+booked_meetings.json

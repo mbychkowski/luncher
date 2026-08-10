@@ -44,6 +44,7 @@ RE_ROLES=(
     "agentregistry.viewer"                   # Agent Registry API Viewer
     "run.invoker"                            # Cloud Run Invoker
     "aiplatform.reasoningEngineServiceAgent" # Gemini Enterprise Agent Platform (GEAP) Reasoning Engine Service Agent
+    "bigquery.admin"                         # BigQuery Admin access for catering dataset queries
 )
 
 for role in "${RE_ROLES[@]}"; do
@@ -56,12 +57,13 @@ done
 
 # 2. Compute Service Account (Cloud Run runtime)
 COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
-echo "Binding storage.admin, artifactregistry.admin, logging.logWriter & run.invoker to Compute SA: ${COMPUTE_SA}..."
+echo "Binding storage.admin, artifactregistry.admin, logging.logWriter, run.invoker & bigquery.admin to Compute SA: ${COMPUTE_SA}..."
 COMPUTE_ROLES=(
     "storage.admin"
     "artifactregistry.admin"
     "logging.logWriter"
     "run.invoker"
+    "bigquery.admin"                         # BigQuery Admin access
 )
 
 for role in "${COMPUTE_ROLES[@]}"; do
@@ -80,4 +82,17 @@ gcloud projects add-iam-policy-binding "$GOOGLE_CLOUD_PROJECT_ID" \
   --role "roles/artifactregistry.admin" \
   --condition=None >/dev/null 2>&1 || true
 
+# 4. Local ADC Active User Account
+USER_ACCOUNT=$(gcloud config get-value account 2>/dev/null || echo "")
+if [ -n "${USER_ACCOUNT}" ]; then
+  echo "Binding roles/bigquery.admin to local developer user account (${USER_ACCOUNT}) for ADC access..."
+  gcloud projects add-iam-policy-binding "$GOOGLE_CLOUD_PROJECT_ID" \
+    --member="user:${USER_ACCOUNT}" \
+    --role "roles/bigquery.admin" \
+    --condition=None >/dev/null 2>&1 || true
+else
+  echo "Warning: Could not detect active gcloud user account for local ADC IAM binding."
+fi
+
 echo "IAM bindings successfully applied."
+

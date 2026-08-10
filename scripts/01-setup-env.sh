@@ -52,14 +52,17 @@ _GOOGLE_CLOUD_PROJECT_ID=$(gcloud config get-value project 2>/dev/null || echo "
 _GOOGLE_CLOUD_LOCATION=$(gcloud config get-value compute/region 2>/dev/null || echo "")
 _GOOGLE_CLOUD_LOCATION=${_GOOGLE_CLOUD_LOCATION:-us-central1}
 _GOOGLE_GENAI_LOCATION=${GOOGLE_GENAI_LOCATION:-global}
+_BIGQUERY_LOCATION=${BIGQUERY_LOCATION:-US}
 
 read -r -p "Enter GCP Project ID [${_GOOGLE_CLOUD_PROJECT_ID}]: " GOOGLE_CLOUD_PROJECT_ID || true
 read -r -p "Enter GCP Deployment Location/Region [${_GOOGLE_CLOUD_LOCATION}]: " GOOGLE_CLOUD_LOCATION || true
 read -r -p "Enter Gemini Model Location [${_GOOGLE_GENAI_LOCATION}]: " GOOGLE_GENAI_LOCATION || true
+read -r -p "Enter BigQuery Location [${_BIGQUERY_LOCATION}]: " BIGQUERY_LOCATION || true
 
 GOOGLE_CLOUD_PROJECT_ID="${GOOGLE_CLOUD_PROJECT_ID:-${_GOOGLE_CLOUD_PROJECT_ID}}"
 GOOGLE_CLOUD_LOCATION="${GOOGLE_CLOUD_LOCATION:-${_GOOGLE_CLOUD_LOCATION}}"
 GOOGLE_GENAI_LOCATION="${GOOGLE_GENAI_LOCATION:-${_GOOGLE_GENAI_LOCATION}}"
+BIGQUERY_LOCATION="${BIGQUERY_LOCATION:-${_BIGQUERY_LOCATION}}"
 
 if [ -z "$GOOGLE_CLOUD_PROJECT_ID" ]; then
   echo "Error: GCP project ID must not be empty. Please run 'gcloud config set project [PROJECT_ID]' or specify one."
@@ -74,6 +77,7 @@ export GOOGLE_GENAI_USE_VERTEXAI="true"
 export GOOGLE_CLOUD_PROJECT_ID="${GOOGLE_CLOUD_PROJECT_ID}"
 export GOOGLE_CLOUD_LOCATION="${GOOGLE_CLOUD_LOCATION}"
 export GOOGLE_GENAI_LOCATION="${GOOGLE_GENAI_LOCATION}"
+export BIGQUERY_LOCATION="${BIGQUERY_LOCATION}"
 
 # Prevent google.auth.exceptions.MutualTLSChannelError by disabling mTLS auto-discovery:
 export GOOGLE_API_USE_CLIENT_CERTIFICATE="false"
@@ -90,6 +94,7 @@ GOOGLE_GENAI_USE_VERTEXAI="true"
 GOOGLE_CLOUD_PROJECT_ID="${GOOGLE_CLOUD_PROJECT_ID}"
 GOOGLE_CLOUD_LOCATION="${GOOGLE_CLOUD_LOCATION}"
 GOOGLE_GENAI_LOCATION="${GOOGLE_GENAI_LOCATION}"
+BIGQUERY_LOCATION="${BIGQUERY_LOCATION}"
 
 ----------------------------------------
 Environment configuration written to .env

@@ -8,8 +8,18 @@ _CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.getenv("DATA_DIR", os.path.join(_CURRENT_DIR, "data"))
 
 MEMBERS_FILE = os.path.join(DATA_DIR, "team_members.json")
-CATERING_FILE = os.path.join(DATA_DIR, "catering_options.json")
 BOOKINGS_FILE = os.path.join(DATA_DIR, "booked_meetings.json")
+
+
+def ensure_bookings_file() -> None:
+    """Ensures that the booked_meetings.json file and its parent directory exist on the fly."""
+    os.makedirs(os.path.dirname(BOOKINGS_FILE), exist_ok=True)
+    if not os.path.exists(BOOKINGS_FILE):
+        try:
+            with open(BOOKINGS_FILE, "w") as f:
+                json.dump([], f, indent=2)
+        except Exception as e:
+            print(f"[Scheduling Agent] Error initializing {BOOKINGS_FILE}: {e}")
 
 
 def get_team_members() -> list[dict]:
@@ -29,22 +39,6 @@ def get_team_members() -> list[dict]:
         return []
 
 
-def get_catering_options() -> list[dict]:
-    """Loads and returns the available catering and local restaurant options.
-
-    Includes restaurant name, cuisine type, rating, and dietary tags (e.g., Gluten-Free, Vegetarian, Vegan, Halal).
-    """
-    print("[Scheduling Agent] Fetching catering options...")
-    try:
-        if os.path.exists(CATERING_FILE):
-            with open(CATERING_FILE, "r") as f:
-                return json.load(f)
-        return []
-    except Exception as e:
-        print(f"[Scheduling Agent] Error reading {CATERING_FILE}: {e}")
-        return []
-
-
 def book_meeting(time_slot: str, restaurant: str, reason: str = "") -> str:
     """Appends a new meeting booking to the central system to finalize a slot and catering choice.
 
@@ -55,7 +49,7 @@ def book_meeting(time_slot: str, restaurant: str, reason: str = "") -> str:
     """
     print(f"[Scheduling Agent] Finalizing booking: {time_slot} with catering from {restaurant}...")
     try:
-        os.makedirs(os.path.dirname(BOOKINGS_FILE), exist_ok=True)
+        ensure_bookings_file()
         bookings = []
         if os.path.exists(BOOKINGS_FILE):
             with open(BOOKINGS_FILE, "r") as f:

@@ -58,8 +58,8 @@ def log_output(pipe: Any, log_func: Any) -> None:
 def start_sub_agents() -> list[subprocess.Popen[str]]:
     """Start strategy and scheduling sub-agents if not already running."""
     processes = []
-    root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    
+    root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+
     # Check port 8081 (strat_agent)
     try:
         res = requests.get("http://127.0.0.1:8081/a2a/app/.well-known/agent-card.json", timeout=2)

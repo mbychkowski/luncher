@@ -11,6 +11,7 @@ from google.genai.types import HttpRetryOptions
 
 # Load environment variables
 load_dotenv()
+os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "True"
 
 
 def inspect_strategy_documents() -> str:

@@ -25,7 +25,9 @@ from google.adk.agents import Agent, ParallelAgent, SequentialAgent
 from google.adk.agents.remote_a2a_agent import RemoteA2aAgent
 from google.adk.apps.app import App
 from google.adk.models.google_llm import Gemini
-from google.genai.types import HttpRetryOptions
+from google.adk.tools import FunctionTool, load_memory, ToolContext
+from google.adk.memory.memory_entry import MemoryEntry
+from google.genai.types import Content, Part, HttpRetryOptions, ThinkingConfig
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -41,6 +43,25 @@ MODEL_LOCATION = os.getenv("GOOGLE_GENAI_LOCATION", "global")
 os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "True"
 
 vertexai.init(project=PROJECT_ID, location=LOCATION)
+
+
+async def save_food_preference(preference: str, tool_context: ToolContext) -> str:
+    """Saves a team member's food preference or allergy to the memory store.
+
+    Args:
+        preference: The food preference statement to save (e.g., 'Alice is allergic to dairy').
+    """
+    content = Content(parts=[Part(text=preference)], role="user")
+    try:
+        entry = MemoryEntry(content=content)
+        await tool_context.add_memory(memories=[entry])
+    except (NotImplementedError, ValueError):
+        from google.adk.events import Event
+        event = Event(content=content, author="user")
+        await tool_context.add_events_to_memory(events=[event])
+    return f"Saved food preference: {preference}"
+
+save_food_preference_tool = FunctionTool(save_food_preference)
 
 
 def _get_auth_headers(url: str) -> dict[str, str]:
@@ -134,33 +155,62 @@ default_retry_policy = HttpRetryOptions(
     http_status_codes=[429, 500, 503],
 )
 
-# Stage 1: Gather corporate strategy and scheduling options concurrently
-parallel_sub_agents = ParallelAgent(
-    name="parallel_info_gatherer",
-    description="Gathers corporate strategy context and team availability concurrently.",
-    sub_agents=[strategy_agent, scheduling_agent],
+# Stage 1: Memory retrieval agent (with thinking_budget=0 for zero reasoning latency)
+memory_agent = Agent(
+    model=Gemini(
+        model="gemini-3.5-flash",
+        thinking_config=ThinkingConfig(thinking_budget=0),
+        retry_options=default_retry_policy,
+        client_kwargs={"location": MODEL_LOCATION},
+    ),
+    name="memory_agent",
+    description="Retrieves saved team food preferences from memory bank or records new food preferences.",
+    instruction=(
+        "You are the Memory & Preference Retrieval Agent. Your job is to check user input for food preferences "
+        "and retrieve all saved team member food preferences from memory.\n\n"
+        "ROUTING AND PREFERENCE SAVING PROTOCOL:\n"
+        "- If the user prompt specifies a food preference or allergy (e.g., 'Alice is allergic to dairy' or 'Bob dislikes spicy food'), call the `save_food_preference` tool to save it to memory, then confirm the saved preference.\n\n"
+        "RETRIEVAL & OUTPUT PROTOCOL:\n"
+        "- Call `load_memory` to fetch all saved team member food preferences, dietary restrictions, and allergies.\n"
+        "- OUTPUT RULES:\n"
+        "  1. If no saved preferences or memories are found, output exactly one short line: 'Checked memory: no saved dietary preferences.'\n"
+        "  2. If saved preferences exist, provide a brief 1-line summary of the saved preferences (e.g., 'Retrieved preferences: Alice (dairy allergy)'). Do NOT add filler text or conversational narrative."
+    ),
+    tools=[
+        save_food_preference_tool,
+        load_memory,
+    ],
 )
 
-# Stage 2: Synthesize findings into a strategy-aligned lunch proposal
+# Stage 1 (Parallel): Gather corporate strategy, scheduling options, and food preference memories concurrently
+parallel_sub_agents = ParallelAgent(
+    name="parallel_info_gatherer",
+    description="Gathers corporate strategy context, team availability, and saved food preferences concurrently.",
+    sub_agents=[memory_agent, strategy_agent, scheduling_agent],
+)
+
+# Stage 2: Synthesize findings into a strategy-aligned lunch proposal (thinking_budget=0 for zero reasoning latency)
 synthesizer_agent = Agent(
     model=Gemini(
         model="gemini-3.5-flash",
+        thinking_config=ThinkingConfig(thinking_budget=0),
         retry_options=default_retry_policy,
         client_kwargs={"location": MODEL_LOCATION},
     ),
     name="lunch_synthesizer",
-    description="Synthesizes corporate strategy objectives and scheduling options into a team lunch proposal.",
+    description="Synthesizes corporate strategy objectives, scheduling options, and retrieved team memories into a team lunch proposal.",
     instruction=(
-        "You are the central Luncher Synthesizer Agent. You will receive context containing strategic corporate priorities "
-        "and team schedule/dietary preferences.\n\n"
+        "You are the central Luncher Synthesizer Agent. You receive context containing retrieved team food preferences from memory, "
+        "strategic corporate priorities, and team schedule options.\n\n"
         "YOUR ROLE:\n"
-        "- Synthesize the strategic priorities (e.g. OmniChef launch, VisionSphere) and scheduling availability into a single cohesive response.\n"
+        "- Synthesize the strategic priorities (e.g. OmniChef launch, VisionSphere), scheduling availability, and retrieved food preferences into a single cohesive response.\n"
+        "- Explicitly list the names of all team members who are included in the event/meeting (e.g., 'Included Team Members: Liam, Diego, Dan, Maya, Aaliyah, Naomi, Jordan, Kai').\n"
         "- Frame the proposed team lunch around the identified strategic objectives (e.g., 'To align with our strategy on the OmniChef launch, I recommend...').\n"
-        "- Present clear time slots and catering recommendations matching team preferences."
+        "- Present clear time slots and in-house catering menu recommendations matching all saved team food preferences."
     ),
 )
 
-# Root Orchestrator: Sequential workflow executing parallel gathering followed by synthesis
+# Root Orchestrator: 2-stage workflow executing parallel information gathering then synthesis
 luncher_agent = SequentialAgent(
     name="luncher_agent",
     description="The centralized Luncher Orchestrator that coordinates strategy-aligned team lunch meetings.",

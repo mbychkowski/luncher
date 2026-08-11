@@ -131,7 +131,7 @@ def test_adk_run_sse(server_fixture: subprocess.Popen[str]) -> None:
     session_data = {"state": {"preferred_language": "English", "visit_count": 1}}
 
     session_response = requests.post(
-        f"{BASE_URL}/apps/app/users/{user_id}/sessions",
+        f"{BASE_URL}/apps/sched_agent/users/{user_id}/sessions",
         headers=HEADERS,
         json=session_data,
         timeout=60,
@@ -140,10 +140,10 @@ def test_adk_run_sse(server_fixture: subprocess.Popen[str]) -> None:
     session_id = session_response.json()["id"]
 
     data = {
-        "app_name": "app",
-        "user_id": user_id,
-        "session_id": session_id,
-        "new_message": {"role": "user", "parts": [{"text": "Hi!"}]},
+        "appName": "sched_agent",
+        "userId": user_id,
+        "sessionId": session_id,
+        "newMessage": {"role": "user", "parts": [{"text": "Hi!"}]},
         "streaming": True,
     }
     response = requests.post(

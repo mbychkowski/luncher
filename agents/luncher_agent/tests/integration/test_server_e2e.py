@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "http://127.0.0.1:8000"
 RUN_SSE_URL = BASE_URL + "/run_sse"
-A2A_RPC_URL = BASE_URL + "/a2a/app/"
+A2A_RPC_URL = BASE_URL + "/a2a/luncher_agent/"
 AGENT_CARD_URL = A2A_RPC_URL + ".well-known/agent-card.json"
 FEEDBACK_URL = BASE_URL + "/feedback"
 
@@ -53,6 +53,46 @@ def log_output(pipe: Any, log_func: Any) -> None:
     """Log the output from the given pipe."""
     for line in iter(pipe.readline, ""):
         log_func(line.strip())
+
+
+def start_sub_agents() -> list[subprocess.Popen[str]]:
+    """Start strategy and scheduling sub-agents if not already running."""
+    processes = []
+    root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+
+    # Check port 8081 (strat_agent)
+    try:
+        res = requests.get("http://127.0.0.1:8081/a2a/app/.well-known/agent-card.json", timeout=2)
+        if res.status_code != 200:
+            raise RequestException()
+    except RequestException:
+        strat_dir = os.path.join(root_dir, "agents", "strat_agent")
+        p_strat = subprocess.Popen(
+            [sys.executable, "-m", "uvicorn", "app.fast_api_app:app", "--host", "0.0.0.0", "--port", "8081"],
+            cwd=strat_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        processes.append(p_strat)
+
+    # Check port 8082 (sched_agent)
+    try:
+        res = requests.get("http://127.0.0.1:8082/a2a/app/.well-known/agent-card.json", timeout=2)
+        if res.status_code != 200:
+            raise RequestException()
+    except RequestException:
+        sched_dir = os.path.join(root_dir, "agents", "sched_agent")
+        p_sched = subprocess.Popen(
+            [sys.executable, "-m", "uvicorn", "app.fast_api_app:app", "--host", "0.0.0.0", "--port", "8082"],
+            cwd=sched_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        processes.append(p_sched)
+
+    return processes
 
 
 def start_server() -> subprocess.Popen[str]:
@@ -108,6 +148,8 @@ def wait_for_server(timeout: int = 90, interval: int = 1) -> bool:
 @pytest.fixture(scope="session")
 def server_fixture(request: Any) -> Iterator[subprocess.Popen[str]]:
     """Pytest fixture to start and stop the server for testing."""
+    sub_processes = start_sub_agents()
+    time.sleep(2)
     logger.info("Starting server process")
     server_process = start_server()
     if not wait_for_server():
@@ -118,6 +160,9 @@ def server_fixture(request: Any) -> Iterator[subprocess.Popen[str]]:
         logger.info("Stopping server process")
         server_process.terminate()
         server_process.wait()
+        for p in sub_processes:
+            p.terminate()
+            p.wait()
         logger.info("Server process stopped")
 
     request.addfinalizer(stop_server)
@@ -131,7 +176,7 @@ def test_adk_run_sse(server_fixture: subprocess.Popen[str]) -> None:
     session_data = {"state": {"preferred_language": "English", "visit_count": 1}}
 
     session_response = requests.post(
-        f"{BASE_URL}/apps/app/users/{user_id}/sessions",
+        f"{BASE_URL}/apps/luncher_agent/users/{user_id}/sessions",
         headers=HEADERS,
         json=session_data,
         timeout=60,
@@ -140,10 +185,10 @@ def test_adk_run_sse(server_fixture: subprocess.Popen[str]) -> None:
     session_id = session_response.json()["id"]
 
     data = {
-        "app_name": "app",
-        "user_id": user_id,
-        "session_id": session_id,
-        "new_message": {"role": "user", "parts": [{"text": "Hi!"}]},
+        "appName": "luncher_agent",
+        "userId": user_id,
+        "sessionId": session_id,
+        "newMessage": {"role": "user", "parts": [{"text": "Hi!"}]},
         "streaming": True,
     }
     response = requests.post(

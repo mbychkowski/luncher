@@ -15,6 +15,12 @@ flowchart LR
     end
 ```
 
+## Usage
+These SDLC agents run in two phases, each invoked by a human:
+
+A. use the `/product` skill (with no prompt text) to interactively construct a spec, which will be saved to `01_specs`
+B. then, use the `/workflow` skill (with no prompt text) to kick off the agent team to implement any unimplemented specs.
+
 ## Folder Structure & Lifecycle
 
 1. [`01_specs/`](01_specs/): Feature specifications (`NNNN_short-name.md`) created via [`product`](../.agents/skills/product/SKILL.md) skill and [`product_manager`](../.agents/agents/product_manager/prompt.md) agent.

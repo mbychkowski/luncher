@@ -4,26 +4,25 @@ import pytest
 from app.tools import (
     get_team_members,
     book_meeting,
-    update_team_member_preferences,
 )
 
 
 def test_get_team_members() -> None:
     members = get_team_members()
     assert isinstance(members, list)
-    assert len(members) > 0
+    assert len(members) == 8
     names = [m["name"] for m in members]
-    assert "Alice" in names
-    assert "Bob" in names
+    assert "Liam" in names
+    assert "Maya" in names
+
+    # Ensure dietary restrictions and cuisine preferences are stripped
+    for member in members:
+        assert "dietary_restrictions" not in member
+        assert "cuisine_preferences" not in member
+        assert "timezone" in member
+        assert "weekly_availability" in member
 
 
-def test_book_meeting_and_preferences(tmp_path: pytest.TempPathFactory) -> None:
+def test_book_meeting(tmp_path: pytest.TempPathFactory) -> None:
     res = book_meeting("Monday 10:00-11:00 AM", "Fiesta Tacos", "Test booking")
     assert "Successfully booked!" in res
-
-    pref_res = update_team_member_preferences(
-        name="Alice",
-        preferred_time_of_day="afternoon",
-        dietary_restrictions=["Vegan", "Nut-Free"],
-    )
-    assert "Successfully updated central database" in pref_res

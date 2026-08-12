@@ -1,8 +1,6 @@
 # 📅 Meeting Scheduling Agent
 
-An agentic application built using the Google Agent Development Kit (ADK) that interactively schedules team meetings and coordinates catering options based on overlapping weekly schedules, dietary restrictions, and preferred cuisines.
-
-The agent features a **central long-term memory write-back pattern**, allowing it to permanently update team member preferences (simulating the Enterprise Memory Bank or traditional database patterns) and remember them across future conversations.
+An agentic application built using the Google Agent Development Kit (ADK) that interactively schedules team meetings based on overlapping weekly schedules and timezones. Food preferences and memories are maintained centrally by `luncher_agent`.
 
 It is exposed via the **Agent-to-Agent (A2A)** protocol, making it ready for multi-agent collaboration and fully compatible with Google's managed **Agent Runtime**.
 
@@ -12,23 +10,20 @@ It is exposed via the **Agent-to-Agent (A2A)** protocol, making it ready for mul
 ## 🏗️ Architecture & Database Integrations
 
 1. **Local Development (Mock Databases)**:
-   - **`data/team_members.json`**: Holds profiles, preferred times, dietary restrictions, cuisine interests, and weekly schedule availabilities.
-   - **`data/catering_options.json`**: Lists local catering options, ratings, and dietary compatibility (Vegetarian, Gluten-Free, Halal, etc.).
+   - **`data/team_members.json`**: Holds profiles, timezones, and weekly schedule availabilities.
    - **`data/booked_meetings.json`**: Holds record of successfully scheduled and confirmed meetings.
 
 2. **BigQuery Integration via Model Context Protocol (MCP)**:
-   - In production, `sched_agent` integrates a **BigQuery MCP Server** connector (`bigquery_dataset.catering_options`). This allows the agent to dynamically query live catering vendor menus, dietary compatibility flags, and team ordering history in BigQuery via MCP standard tools.
+   - In production, `sched_agent` integrates a **BigQuery MCP Server** connector (`bigquery_dataset.catering_options`). This allows querying live catering vendor menus and compatibility in BigQuery via MCP standard tools.
 
 
 ---
 
 ## 🛠️ Specialized Tools
 
-The agent is equipped with four custom python tools:
-- `get_team_members()`: Retrieves team member schedules and profiles.
-- `get_catering_options()`: Retrieves catering options.
+The agent is equipped with custom python tools:
+- `get_team_members()`: Retrieves team member schedules, timezones, and availability.
 - `book_meeting(time_slot, restaurant, reason)`: Records a finalized meeting when the user confirms.
-- `update_team_member_preferences(name, preferred_time_of_day, dietary_restrictions, cuisine_preferences)`: Updates the permanent `team_members.json` database dynamically when users express changing preferences.
 
 ---
 
@@ -62,17 +57,10 @@ The easiest way to test this agent interactively is using the workspace's playgr
    ```
 2. Open the playground in your browser and try interacting with it!
 
-### Example Test Scenarios to Try:
+### Example Test Scenario:
 
-#### Scenario A: The Standard Golden Flow
 - **Prompt:** *"Hi, please help me schedule a meeting for Alice, Bob, and Charlie."*
-- **Expected Agent Action:** The agent loads the database, calculates that the only joint free slot is **Monday 10:00 - 11:00 AM**, and identifies that **Fiesta Tacos** perfectly fits Alice's vegetarian and Charlie's gluten-free requirements while matching everyone's cuisine preferences.
-- **Agent Response:** It should propose *exactly one option* (e.g., *"I've found a perfect slot on Monday from 10:00 to 11:00 AM with catering from Fiesta Tacos..."*) and ask for confirmation.
+- **Expected Agent Action:** The agent loads the database, calculates joint free slots based on member availabilities, and proposes an optimal slot.
 - **Prompt:** *"That works perfectly, let's book it!"*
 - **Expected Agent Action:** The agent calls `book_meeting`, saves the record in `data/booked_meetings.json`, and returns the booking ID.
 
-#### Scenario B: Interactively Updating Long-term Memory
-- **Prompt:** *"Help schedule a meeting for the team. By the way, Alice is now vegan instead of vegetarian, so make sure to update her profile."*
-- **Expected Agent Action:** The agent identifies a permanent shift in preferences, invokes the `update_team_member_preferences` tool (updating Alice's dietary restrictions to `["Vegan"]` in `data/team_members.json`), and then recalculates.
-- **Expected Agent Response:** It confirms the permanent update to Alice's profile, and suggests a catering option that fits a Vegan diet (e.g., **Green Garden**).
-- **Subsequent Run Check:** View `data/team_members.json` to verify Alice's record was permanently updated!

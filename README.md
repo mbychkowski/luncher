@@ -44,7 +44,7 @@ graph TD
     subgraph SchedAgent ["📅 Scheduling Agent (Cloud Run Service)"]
         SchedA2A["A2A FastAPI Endpoint"]
         SchedLLM["Gemini Model"]
-        SchedTools["🛠️ Tools:<br/>• get_team_members()<br/>• get_catering_options()<br/>• book_meeting()<br/>• update_team_member_preferences()"]
+        SchedTools["🛠️ Tools:<br/>• get_team_members()<br/>• book_meeting()"]
         SchedA2A --> SchedLLM
         SchedLLM --> SchedTools
     end

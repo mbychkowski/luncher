@@ -23,10 +23,9 @@ def ensure_bookings_file() -> None:
 
 
 def get_team_members() -> list[dict]:
-    """Loads and returns the team members' profiles, schedules, and preferences.
+    """Loads and returns the team members' profiles and weekly availability schedules.
 
-    This lists each member's timezone, weekly availability slots, dietary restrictions,
-    and preferred cuisines.
+    This lists each member's timezone and weekly availability slots.
     """
     print("[Scheduling Agent] Fetching team members profiles...")
     try:
@@ -73,47 +72,3 @@ def book_meeting(time_slot: str, restaurant: str, reason: str = "") -> str:
         return f"Successfully booked! Meeting scheduled for {time_slot} with catering from {restaurant}. Booking ID: {new_booking['booking_id']}."
     except Exception as e:
         return f"Failed to book meeting: {str(e)}"
-
-
-def update_team_member_preferences(
-    name: str, 
-    preferred_time_of_day: str | None = None, 
-    dietary_restrictions: list[str] | None = None, 
-    cuisine_preferences: list[str] | None = None
-) -> str:
-    """Updates a team member's preferred meeting times and food preferences in the central registry.
-    
-    This acts as the agent's central long-term memory, ensuring the updated preferences 
-    persist and are automatically applied to all future meeting scheduling requests.
-
-    Args:
-        name: Name of the team member to update (e.g. "Alice", "Bob").
-        preferred_time_of_day: New preferred meeting time window (e.g., "morning", "afternoon").
-        dietary_restrictions: Updated list of dietary restrictions (e.g., ["Vegan", "Gluten-Free"]).
-        cuisine_preferences: Updated list of preferred cuisines (e.g., ["Mexican", "Asian"]).
-    """
-    print(f"[Scheduling Agent] Updating long-term preferences database for team member: {name}...")
-    try:
-        members = get_team_members()
-        updated = False
-        for member in members:
-            if member["name"].strip().lower() == name.strip().lower():
-                if preferred_time_of_day is not None:
-                    member["preferred_time_of_day"] = preferred_time_of_day
-                if dietary_restrictions is not None:
-                    member["dietary_restrictions"] = dietary_restrictions
-                if cuisine_preferences is not None:
-                    member["cuisine_preferences"] = cuisine_preferences
-                updated = True
-                break
-
-        if not updated:
-            return f"Team member '{name}' not found in the database. No updates made."
-
-        os.makedirs(os.path.dirname(MEMBERS_FILE), exist_ok=True)
-        with open(MEMBERS_FILE, "w") as f:
-            json.dump(members, f, indent=2)
-
-        return f"Successfully updated central database preferences for {name}. These preferences are now saved permanently in long-term memory."
-    except Exception as e:
-        return f"Failed to update team member preferences: {str(e)}"

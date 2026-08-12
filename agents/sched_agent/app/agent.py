@@ -26,18 +26,17 @@ import sys
 
 # Load environment variables
 load_dotenv()
+os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "True"
 
 try:
     from app.tools import (
         get_team_members,
         book_meeting,
-        update_team_member_preferences,
     )
 except ModuleNotFoundError:
     from .tools import (
         get_team_members,
         book_meeting,
-        update_team_member_preferences,
     )
 
 sched_retry_policy = types.HttpRetryOptions(
@@ -80,34 +79,28 @@ root_agent = Agent(
         client_kwargs={"location": MODEL_LOCATION},
     ),
     name="scheduling_agent",
-    description="Helps coordinate meeting times and catering food preferences across team members interactively using BigQuery MCP menu data.",
+    description="Helps coordinate meeting times and availability across team members interactively using BigQuery MCP menu data.",
     instruction=(
         "You are the Meeting and Catering Coordinator Agent. Your job is to help coordinate a meeting "
-        "time and a catering restaurant/item for the team.\n\n"
+        "time and in-house catering menu items for the team.\n\n"
         "Your available tools:\n"
-        "1. 'get_team_members' - Loads profiles, timezone, availability, dietary restrictions, and cuisine preferences.\n"
+        "1. 'get_team_members' - Loads profiles, timezone, and weekly availability.\n"
         "2. BigQuery MCP Tools ('run_query', 'get_table', 'list_tables_in_dataset') - Queries BigQuery for catering menu items in the 'catering.menu_items' table.\n"
-        "3. 'book_meeting' - Finalizes and records the booked meeting when the user confirms.\n"
-        "4. 'update_team_member_preferences' - Permanently updates a member's preferences/dietary constraints in the database.\n\n"
+        "3. 'book_meeting' - Finalizes and records the booked meeting when the user confirms.\n\n"
         "CRITICAL BEHAVIOR RULES:\n"
         "- STEP 1: On your first turn, always load team profiles with 'get_team_members' and query catering options from the BigQuery table 'catering.menu_items' using BigQuery MCP tools (e.g. 'run_query').\n"
-        "- STEP 2: Find overlapping weekly availabilities among all members and cross-reference them with catering options that respect "
-        "everyone's dietary restrictions (e.g., allergens and dietary_labels) and align with their cuisine/dietary preferences.\n"
+        "- STEP 2: Find overlapping weekly availabilities among all members and cross-reference them with catering options.\n"
         "- STEP 3 (INTERACTIVE PROPOSING): You must propose EXACTLY ONE optimal recommendation first. Keep it simple, clear, and "
         "conversational. Do NOT dump all possible options or overload the user. Ask clearly for confirmation (e.g., 'Does Monday 10:00-11:00 AM "
         "with Caprese Focaccia Panini work for the team?').\n"
         "- STEP 4 (BOOKING EXECUTION): Only call 'book_meeting' after the user explicitly accepts your proposal. Never auto-book without consent.\n"
         "- STEP 5 (REJECTION & ALTERNATIVES): If the user rejects your proposal, search your database/BigQuery for the next best slot or item, "
-        "and present that as the next single recommendation.\n"
-        "- STEP 6 (MEMORY WRITING): If the user mentions a shift in general/permanent preferences (e.g., 'Alice is vegan now', or 'Bob doesn't like Mexican "
-        "anymore'), you MUST call 'update_team_member_preferences' immediately to record it. Then recalculate your recommendations based "
-        "on this updated central database."
+        "and present that as the next single recommendation."
     ),
     tools=[
         get_team_members,
         bigquery_mcp_toolset,
         book_meeting,
-        update_team_member_preferences,
     ],
 )
 

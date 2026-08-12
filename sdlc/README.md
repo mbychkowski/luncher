@@ -4,9 +4,15 @@ Automated feature development pipeline using specialized agents, skills, and wor
 
 ## Pipeline Overview
 
-```
-[product skill] -> 01_specs -> 02_implementation_plans & 03_tasks -> 04_tests & code -> 05_reviews
-                                 [implement workflow]
+```mermaid
+flowchart LR
+    A["product skill"] --> B["01_specs"]
+    subgraph IW["implement workflow"]
+        direction LR
+        B --> C["02_implementation_plans<br/>& 03_tasks"]
+        C --> D["04_tests & code"]
+        D --> E["05_reviews"]
+    end
 ```
 
 ## Folder Structure & Lifecycle

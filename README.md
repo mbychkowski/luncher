@@ -12,7 +12,6 @@ It coordinates strategy-aligned team lunch meetings by orchestrating two special
 ## 📝 TODO / Future Architecture Enhancements
 
 - 📄 **Strategy Documents in Google Cloud Storage (GCS)**: Update `strat_agent` to dynamically ingest and query corporate strategy PDF documents directly from a designated GCS bucket (`gs://$GOOGLE_CLOUD_PROJECT_ID-strategy-docs/`), enabling real-time document search and automated PDF RAG processing.
-- 🥗 **Catering Options & Menu Schema in BigQuery via MCP**: Integrate a **BigQuery Model Context Protocol (MCP)** server into `sched_agent` (`scheduling_agent`). This will allow `sched_agent` to query live vendor menus, dietary compatibility flags, and team ordering history stored in BigQuery (`bigquery_dataset.catering_options`) to demonstrate real-world MCP database tool integration.
 
 ---
 

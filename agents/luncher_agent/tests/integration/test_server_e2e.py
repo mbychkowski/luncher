@@ -17,8 +17,6 @@ import logging
 import os
 import subprocess
 import sys
-import threading
-import time
 import uuid
 from collections.abc import Iterator
 from typing import Any
@@ -34,7 +32,7 @@ from a2a.types import (
     SendStreamingMessageResponse,
     TextPart,
 )
-from requests.exceptions import RequestException
+from conftest import AGENT_DIR, tail_output, wait_for_url
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -49,52 +47,6 @@ FEEDBACK_URL = BASE_URL + "/feedback"
 HEADERS = {"Content-Type": "application/json"}
 
 
-def log_output(pipe: Any, log_func: Any) -> None:
-    """Log the output from the given pipe."""
-    for line in iter(pipe.readline, ""):
-        log_func(line.strip())
-
-
-def start_sub_agents() -> list[subprocess.Popen[str]]:
-    """Start strategy and scheduling sub-agents if not already running."""
-    processes = []
-    root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
-
-    # Check port 8081 (strat_agent)
-    try:
-        res = requests.get("http://127.0.0.1:8081/a2a/app/.well-known/agent-card.json", timeout=2)
-        if res.status_code != 200:
-            raise RequestException()
-    except RequestException:
-        strat_dir = os.path.join(root_dir, "agents", "strat_agent")
-        p_strat = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "app.fast_api_app:app", "--host", "0.0.0.0", "--port", "8081"],
-            cwd=strat_dir,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        processes.append(p_strat)
-
-    # Check port 8082 (sched_agent)
-    try:
-        res = requests.get("http://127.0.0.1:8082/a2a/app/.well-known/agent-card.json", timeout=2)
-        if res.status_code != 200:
-            raise RequestException()
-    except RequestException:
-        sched_dir = os.path.join(root_dir, "agents", "sched_agent")
-        p_sched = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "app.fast_api_app:app", "--host", "0.0.0.0", "--port", "8082"],
-            cwd=sched_dir,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        processes.append(p_sched)
-
-    return processes
-
-
 def start_server() -> subprocess.Popen[str]:
     """Start the FastAPI server using subprocess and log its output."""
     command = [
@@ -103,7 +55,7 @@ def start_server() -> subprocess.Popen[str]:
         "uvicorn",
         "app.fast_api_app:app",
         "--host",
-        "0.0.0.0",
+        "127.0.0.1",
         "--port",
         "8000",
     ]
@@ -111,61 +63,35 @@ def start_server() -> subprocess.Popen[str]:
     env["INTEGRATION_TEST"] = "TRUE"
     process = subprocess.Popen(
         command,
+        cwd=AGENT_DIR,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
         bufsize=1,
         env=env,
     )
-
-    # Start threads to log stdout and stderr in real-time
-    threading.Thread(
-        target=log_output, args=(process.stdout, logger.info), daemon=True
-    ).start()
-    threading.Thread(
-        target=log_output, args=(process.stderr, logger.error), daemon=True
-    ).start()
-
+    tail_output(process, "luncher_agent")
     return process
-
-
-def wait_for_server(timeout: int = 90, interval: int = 1) -> bool:
-    """Wait for the server to be ready (agent card requires the lifespan to run)."""
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        try:
-            response = requests.get(AGENT_CARD_URL, timeout=10)
-            if response.status_code == 200:
-                logger.info("Server is ready")
-                return True
-        except RequestException:
-            pass
-        time.sleep(interval)
-    logger.error(f"Server did not become ready within {timeout} seconds")
-    return False
 
 
 @pytest.fixture(scope="session")
 def server_fixture(request: Any) -> Iterator[subprocess.Popen[str]]:
     """Pytest fixture to start and stop the server for testing."""
-    sub_processes = start_sub_agents()
-    time.sleep(2)
     logger.info("Starting server process")
     server_process = start_server()
-    if not wait_for_server():
-        pytest.fail("Server failed to start")
-    logger.info("Server process started")
 
     def stop_server() -> None:
         logger.info("Stopping server process")
         server_process.terminate()
         server_process.wait()
-        for p in sub_processes:
-            p.terminate()
-            p.wait()
         logger.info("Server process stopped")
 
     request.addfinalizer(stop_server)
+
+    if not wait_for_url(AGENT_CARD_URL, server_process):
+        pytest.fail("Server failed to start")
+    logger.info("Server process started")
+
     yield server_process
 
 

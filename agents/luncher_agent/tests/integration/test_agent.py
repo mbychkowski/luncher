@@ -14,10 +14,25 @@
 
 from google.adk.agents.run_config import RunConfig, StreamingMode
 from google.adk.runners import Runner
-from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
-from app.agent import root_agent
+from app.agent import app as adk_app
+from app.app_utils import services
+
+
+def build_runner() -> Runner:
+    """Wire the runner the way fast_api_app does.
+
+    memory_agent calls `load_memory`, which raises "Memory service is not
+    available" without a memory service, aborting the parallel stage before the
+    synthesizer -- so the run yields no text at all.
+    """
+    return Runner(
+        app=adk_app,
+        session_service=services.get_session_service(),
+        artifact_service=services.get_artifact_service(),
+        memory_service=services.get_memory_service(),
+    )
 
 
 def test_agent_stream() -> None:
@@ -26,13 +41,13 @@ def test_agent_stream() -> None:
     Tests that the agent returns valid streaming responses.
     """
 
-    session_service = InMemorySessionService()
-
-    session = session_service.create_session_sync(user_id="test_user", app_name="test")
-    runner = Runner(agent=root_agent, session_service=session_service, app_name="test")
+    runner = build_runner()
+    session = runner.session_service.create_session_sync(
+        user_id="test_user", app_name=adk_app.name
+    )
 
     message = types.Content(
-        role="user", parts=[types.Part.from_text(text="Why is the sky blue?")]
+        role="user", parts=[types.Part.from_text(text="Plan a team lunch for next week")]
     )
 
     events = list(
@@ -61,9 +76,10 @@ def test_agent_save_preference_stream() -> None:
     """
     Integration test verifying agent execution when user inputs a food preference.
     """
-    session_service = InMemorySessionService()
-    session = session_service.create_session_sync(user_id="test_user", app_name="test")
-    runner = Runner(agent=root_agent, session_service=session_service, app_name="test")
+    runner = build_runner()
+    session = runner.session_service.create_session_sync(
+        user_id="test_user", app_name=adk_app.name
+    )
 
     message = types.Content(
         role="user", parts=[types.Part.from_text(text="Alice is allergic to shellfish")]

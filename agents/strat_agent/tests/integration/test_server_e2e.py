@@ -48,6 +48,8 @@ FEEDBACK_URL = BASE_URL + "/feedback"
 
 HEADERS = {"Content-Type": "application/json"}
 
+AGENT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 def log_output(pipe: Any, log_func: Any) -> None:
     """Log the output from the given pipe."""
@@ -63,7 +65,7 @@ def start_server() -> subprocess.Popen[str]:
         "uvicorn",
         "app.fast_api_app:app",
         "--host",
-        "0.0.0.0",
+        "127.0.0.1",
         "--port",
         "8000",
     ]
@@ -71,6 +73,7 @@ def start_server() -> subprocess.Popen[str]:
     env["INTEGRATION_TEST"] = "TRUE"
     process = subprocess.Popen(
         command,
+        cwd=AGENT_DIR,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,

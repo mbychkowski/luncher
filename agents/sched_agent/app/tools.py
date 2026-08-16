@@ -1,6 +1,10 @@
 import os
 import json
-import datetime
+
+try:
+    from app import bookings
+except ModuleNotFoundError:
+    from . import bookings
 
 # Resolve DATA_DIR cleanly for local, container, or package execution
 _CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -8,18 +12,6 @@ _CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.getenv("DATA_DIR", os.path.join(_CURRENT_DIR, "data"))
 
 MEMBERS_FILE = os.path.join(DATA_DIR, "team_members.json")
-BOOKINGS_FILE = os.path.join(DATA_DIR, "booked_meetings.json")
-
-
-def ensure_bookings_file() -> None:
-    """Ensures that the booked_meetings.json file and its parent directory exist on the fly."""
-    os.makedirs(os.path.dirname(BOOKINGS_FILE), exist_ok=True)
-    if not os.path.exists(BOOKINGS_FILE):
-        try:
-            with open(BOOKINGS_FILE, "w") as f:
-                json.dump([], f, indent=2)
-        except Exception as e:
-            print(f"[Scheduling Agent] Error initializing {BOOKINGS_FILE}: {e}")
 
 
 def get_team_members() -> list[dict]:
@@ -38,8 +30,8 @@ def get_team_members() -> list[dict]:
         return []
 
 
-def book_meeting(time_slot: str, restaurant: str, reason: str = "") -> str:
-    """Appends a new meeting booking to the central system to finalize a slot and catering choice.
+async def book_meeting(time_slot: str, restaurant: str, reason: str = "") -> str:
+    """Records a confirmed meeting and catering choice in the shared team bookings.
 
     Args:
         time_slot: The day and time range of the confirmed meeting, e.g., "Monday 10:00-11:00".
@@ -48,27 +40,75 @@ def book_meeting(time_slot: str, restaurant: str, reason: str = "") -> str:
     """
     print(f"[Scheduling Agent] Finalizing booking: {time_slot} with catering from {restaurant}...")
     try:
-        ensure_bookings_file()
-        bookings = []
-        if os.path.exists(BOOKINGS_FILE):
-            with open(BOOKINGS_FILE, "r") as f:
-                try:
-                    bookings = json.load(f)
-                except json.JSONDecodeError:
-                    bookings = []
-
-        new_booking = {
-            "booking_id": f"bk_{int(datetime.datetime.now().timestamp())}",
-            "time_slot": time_slot,
-            "catering_restaurant": restaurant,
-            "reason": reason,
-            "booked_at": datetime.datetime.now().isoformat()
-        }
-        bookings.append(new_booking)
-
-        with open(BOOKINGS_FILE, "w") as f:
-            json.dump(bookings, f, indent=2)
-
-        return f"Successfully booked! Meeting scheduled for {time_slot} with catering from {restaurant}. Booking ID: {new_booking['booking_id']}."
+        booking = await bookings.add_booking(time_slot, restaurant, reason)
+        return (
+            f"Successfully booked! Meeting scheduled for {time_slot} with catering "
+            f"from {restaurant}. Booking ID: {booking['booking_id']}."
+        )
     except Exception as e:
         return f"Failed to book meeting: {str(e)}"
+
+
+async def get_bookings() -> str:
+    """Lists every meeting already booked by the team, oldest first.
+
+    Bookings are shared across the whole team, so this returns the same list
+    regardless of who asks. Use it to avoid double-booking a slot.
+    """
+    print("[Scheduling Agent] Fetching existing team bookings...")
+    try:
+        existing = await bookings.list_bookings()
+        if not existing:
+            return "No meetings are currently booked."
+        lines = [
+            f"- {b['time_slot']} - catering from {b['catering_restaurant']}"
+            f" (booking {b['booking_id']})"
+            for b in existing
+        ]
+        return "Existing team bookings:\n" + "\n".join(lines)
+    except Exception as e:
+        return f"Failed to read bookings: {str(e)}"
+
+
+async def cancel_booking(booking_id: str) -> str:
+    """Cancels a booked meeting, freeing its time slot for the whole team.
+
+    Args:
+        booking_id: Id of the booking to cancel, as shown by `get_bookings`,
+            e.g. "bk_1786830033". Call `get_bookings` first if the user named a
+            day rather than an id -- cancelling the wrong meeting is not undoable.
+    """
+    print(f"[Scheduling Agent] Cancelling booking {booking_id}...")
+    try:
+        if await bookings.delete_booking(booking_id):
+            return f"Cancelled booking {booking_id}. Its time slot is free again."
+        return f"No booking {booking_id} exists. Call get_bookings for the current list."
+    except Exception as e:
+        return f"Failed to cancel booking: {str(e)}"
+
+
+async def cancel_all_bookings(expected_count: int) -> str:
+    """Cancels every booking the team has, clearing the shared calendar.
+
+    This affects everyone, not just the person asking, and cannot be undone. Call
+    `get_bookings` immediately before, tell the user how many will go, and only
+    proceed once they confirm.
+
+    Args:
+        expected_count: How many bookings `get_bookings` just returned. The
+            cancellation is refused if the collection no longer holds exactly
+            that many, which catches a stale count and a guessed one alike.
+    """
+    print(f"[Scheduling Agent] Clearing all bookings (expecting {expected_count})...")
+    try:
+        deleted = await bookings.delete_all_bookings(expected_count)
+        if deleted < 0:
+            return (
+                f"Refused: the team does not have exactly {expected_count} bookings. "
+                "Call get_bookings again and retry with the number it reports."
+            )
+        if deleted == 0:
+            return "There were no bookings to cancel."
+        return f"Cancelled all {deleted} bookings. Every slot is free again."
+    except Exception as e:
+        return f"Failed to cancel bookings: {str(e)}"

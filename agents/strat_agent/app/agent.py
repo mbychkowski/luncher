@@ -1,3 +1,4 @@
+import logging
 import os
 import io
 import pypdf
@@ -7,10 +8,11 @@ from google.cloud import storage
 from google.adk.agents import Agent
 from google.adk.apps import App
 from google.adk.models.google_llm import Gemini
-from google.genai.types import HttpRetryOptions
+from google.genai.types import HttpRetryOptions, ThinkingConfig, ThinkingLevel
 
 # Load environment variables
-load_dotenv()
+# override=True: a stale shell export must not beat .env.
+load_dotenv(override=True)
 os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "True"
 
 
@@ -27,29 +29,35 @@ def inspect_strategy_documents() -> str:
     extracted_texts = []
 
     if bucket_name:
-        # Production: Fetch from GCS bucket
+        # A returned string is the tool's answer, so a failed read would reach the
+        # orchestrator as strategy context. Raise instead.
         print(f"[Strategy Agent] Running in cloud mode. Inspecting GCS bucket: '{bucket_name}'...")
         try:
             client = storage.Client()
             bucket = client.bucket(bucket_name)
             # List all blobs and filter for .pdf
             blobs = list(bucket.list_blobs())
-            pdf_blobs = [b for b in blobs if b.name.lower().endswith(".pdf")]
-
-            if not pdf_blobs:
-                return f"No PDF documents found in GCS bucket '{bucket_name}'."
-
-            for blob in pdf_blobs:
-                print(f"[Strategy Agent] Fetching and parsing GCS blob: '{blob.name}'...")
-                pdf_data = blob.download_as_bytes()
-                pdf_reader = pypdf.PdfReader(io.BytesIO(pdf_data))
-                text = ""
-                for page in pdf_reader.pages:
-                    text += page.extract_text() or ""
-                extracted_texts.append(f"--- Document (GCS): {blob.name} ---\n{text}\n")
-
         except Exception as e:
-            return f"Error connecting to or reading from GCS bucket '{bucket_name}': {str(e)}"
+            raise RuntimeError(
+                f"Cannot read STRATEGY_DOCS_BUCKET '{bucket_name}': {e}. Needs"
+                " roles/storage.objectViewer for this agent's service account."
+            ) from e
+
+        pdf_blobs = [b for b in blobs if b.name.lower().endswith(".pdf")]
+        if not pdf_blobs:
+            raise RuntimeError(
+                f"STRATEGY_DOCS_BUCKET '{bucket_name}' contains no PDFs. Upload them,"
+                " or unset the variable to use the copies in data/docs/."
+            )
+
+        for blob in pdf_blobs:
+            print(f"[Strategy Agent] Fetching and parsing GCS blob: '{blob.name}'...")
+            pdf_data = blob.download_as_bytes()
+            pdf_reader = pypdf.PdfReader(io.BytesIO(pdf_data))
+            text = ""
+            for page in pdf_reader.pages:
+                text += page.extract_text() or ""
+            extracted_texts.append(f"--- Document (GCS): {blob.name} ---\n{text}\n")
     else:
         # Local Development: Fetch from agents/strat_agent/data/docs
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -93,11 +101,19 @@ strat_retry_policy = HttpRetryOptions(
     http_status_codes=[429, 500, 503],
 )
 
+logger = logging.getLogger(__name__)
+
 MODEL_LOCATION = os.getenv("GOOGLE_GENAI_LOCATION", "global")
+# Pinned version. Override via GOOGLE_GENAI_MODEL. Only served from the `global`
+# endpoint -- regional locations return 404 for it.
+MODEL = os.getenv("GOOGLE_GENAI_MODEL", "gemini-3.6-flash")
+
+logger.info("Using Gemini model '%s' in location '%s'", MODEL, MODEL_LOCATION)
 
 root_agent = Agent(
     model=Gemini(
-        model="gemini-3.5-flash",
+        model=MODEL,
+        thinking_config=ThinkingConfig(thinking_level=ThinkingLevel.MINIMAL),
         retry_options=strat_retry_policy,
         client_kwargs={"location": MODEL_LOCATION},
     ),

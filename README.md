@@ -9,6 +9,27 @@ It coordinates strategy-aligned team lunch meetings by orchestrating two special
 
 ---
 
+## 💻 Reading This Guide in VS Code
+
+The architecture diagram below is a mermaid block, and the setup sections that
+follow are largely copy-paste shell commands. Two extensions make both usable:
+
+- **[Markdown Preview Mermaid Support](https://marketplace.visualstudio.com/items?itemName=bierner.markdown-mermaid)** (`bierner.markdown-mermaid`) — renders the diagrams instead of showing their source.
+- **[Markdown Code Copy Button](https://marketplace.visualstudio.com/items?itemName=barnim.markdown-code-copy-button)** (`barnim.markdown-code-copy-button`) — adds a copy button to every code block.
+
+Both are listed in `.vscode/extensions.json`, so VS Code offers them the first
+time you open the repo. To install them directly:
+
+```bash
+code --install-extension bierner.markdown-mermaid
+code --install-extension barnim.markdown-code-copy-button
+```
+
+Open this file in the preview pane with `Cmd+Shift+V` (`Ctrl+Shift+V` on Windows
+and Linux).
+
+---
+
 ## 🏛️ Agent Architecture Diagram
 
 Stage 1 gathers from three sub-agents concurrently: `memory_agent` runs in-process,

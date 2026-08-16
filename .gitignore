@@ -45,3 +45,10 @@ Thumbs.db
 .adk
 deployment_metadata.json
 booked_meetings.json
+
+# Scratch space for session handoffs and working notes. Never committed: it
+# accumulates cross-repo paths and local context that do not belong in history.
+.scratch/
+
+# Eval run outputs: traces and grade results are per-run artifacts.
+agents/*/artifacts/

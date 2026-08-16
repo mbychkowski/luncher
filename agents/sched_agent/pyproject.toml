@@ -5,11 +5,12 @@ description = "Meeting & Catering Coordination Agent"
 readme = "README.md"
 requires-python = ">=3.12, <3.14"
 dependencies = [
-    "google-adk[a2a,gcp]>=2.0.0,<3.0.0",
+    "google-adk[a2a,eval,gcp]>=2.0.0,<3.0.0",
     "mcp>=1.0.0,<2.0.0",
     "bigquery-mcp>=0.1.0",
     "a2a-sdk[http-server]~=0.3.22",
     "uvicorn",
+    "watchfiles",
     "python-dotenv",
     "starlette",
     "sse-starlette",
@@ -32,6 +33,11 @@ package = false
 
 [tool.pytest.ini_options]
 pythonpath = "."
+
+[dependency-groups]
+dev = [
+    "google-agents-cli>=1.2.1",
+]
 
 
 

@@ -75,7 +75,11 @@ if [ -z "$GOOGLE_CLOUD_PROJECT_ID" ]; then
 fi
 
 echo "Setting gcloud defaults..."
-gcloud config set project "${GOOGLE_CLOUD_PROJECT_ID}" >/dev/null 2>&1
+# --verbosity=error prevents informational/success messages from printing to stderr
+if ! gcloud config set project "${GOOGLE_CLOUD_PROJECT_ID}" --verbosity=error > /dev/null; then
+  # gcloud itself automatically prints the failure message to stderr if an error occurs
+  exit 1
+fi
 
 cat << EOF > .env
 export GOOGLE_GENAI_USE_VERTEXAI="true"

@@ -22,6 +22,7 @@ registration.
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import TYPE_CHECKING
 
@@ -44,6 +45,8 @@ if TYPE_CHECKING:
 # URI advertised on the agent card describing the executor extension shipped
 # by ADK. Kept as a module-level constant so callers can override or extend
 # the capabilities list when needed.
+logger = logging.getLogger(__name__)
+
 _ADK_AGENT_EXECUTOR_EXTENSION_URI = (
     "https://google.github.io/adk-docs/a2a/a2a-extension/"
 )
@@ -77,14 +80,23 @@ def _resolve_app_url(app_url: str | None) -> str:
 
     agent_engine_id = os.getenv("GOOGLE_CLOUD_AGENT_ENGINE_ID")
     project = os.getenv("GOOGLE_CLOUD_PROJECT_ID")
-    # Not GOOGLE_CLOUD_LOCATION: the agent pins it to "global", which would build
-    # an invalid "global-aiplatform.googleapis.com" URL.
-    location = os.getenv("GOOGLE_CLOUD_AGENT_ENGINE_LOCATION", "us-east1")
+    # Never defaulted: a guessed region yields a card URL that resolves and points
+    # at the wrong place. Not GOOGLE_GENAI_LOCATION either -- that is "global",
+    # which would build an invalid "global-aiplatform.googleapis.com" host.
+    location = os.getenv("GOOGLE_CLOUD_AGENT_ENGINE_LOCATION") or os.getenv(
+        "GOOGLE_CLOUD_LOCATION"
+    )
     if agent_engine_id and project and location:
         return (
             f"https://{location}-aiplatform.googleapis.com/reasoningEngines/v1"
             f"/projects/{project}/locations/{location}"
             f"/reasoningEngines/{agent_engine_id}/api"
+        )
+    if agent_engine_id and not location:
+        logger.warning(
+            "Running on Agent Runtime but neither GOOGLE_CLOUD_AGENT_ENGINE_LOCATION "
+            "nor GOOGLE_CLOUD_LOCATION is set, so the agent card cannot advertise a "
+            "reachable URL. Set APP_URL or one of those."
         )
 
     port = os.getenv("PORT", "8000")

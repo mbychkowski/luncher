@@ -1,10 +1,20 @@
-import json
-import os
+import asyncio
+
 import pytest
+
+from app import bookings
 from app.tools import (
     get_team_members,
     book_meeting,
+    get_bookings,
 )
+
+
+@pytest.fixture(autouse=True)
+def _isolate_local_bookings(monkeypatch: pytest.MonkeyPatch):
+    """Runs each test against an empty in-process store, never Memory Bank."""
+    monkeypatch.delenv("GOOGLE_CLOUD_AGENT_ENGINE_ID", raising=False)
+    monkeypatch.setattr(bookings, "_local_bookings", [])
 
 
 def test_get_team_members() -> None:
@@ -23,6 +33,18 @@ def test_get_team_members() -> None:
         assert "weekly_availability" in member
 
 
-def test_book_meeting(tmp_path: pytest.TempPathFactory) -> None:
-    res = book_meeting("Monday 10:00-11:00 AM", "Fiesta Tacos", "Test booking")
+def test_book_meeting() -> None:
+    res = asyncio.run(book_meeting("Monday 10:00-11:00 AM", "Fiesta Tacos", "Test booking"))
     assert "Successfully booked!" in res
+    assert "bk_" in res
+
+
+def test_get_bookings_empty() -> None:
+    assert "No meetings are currently booked." in asyncio.run(get_bookings())
+
+
+def test_get_bookings_lists_what_was_booked() -> None:
+    asyncio.run(book_meeting("Friday 12:00-13:00", "Fiesta Tacos", "Team lunch"))
+    listed = asyncio.run(get_bookings())
+    assert "Friday 12:00-13:00" in listed
+    assert "Fiesta Tacos" in listed

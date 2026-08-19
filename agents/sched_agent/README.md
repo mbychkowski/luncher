@@ -1,6 +1,6 @@
 # 📅 Meeting Scheduling Agent
 
-An agentic application built using the Google Agent Development Kit (ADK) that interactively schedules team meetings based on overlapping weekly schedules and timezones. Food preferences and memories are maintained centrally by `luncher_agent`.
+An agentic application built using the Google Agent Development Kit (ADK) that interactively schedules team meetings based on overlapping weekly schedules and timezones, and records confirmed bookings in a shared team calendar. Per-user food preferences and conversational memories are maintained centrally by `luncher_agent`.
 
 It is exposed via the **Agent-to-Agent (A2A)** protocol, making it ready for multi-agent collaboration and fully compatible with Google's managed **Agent Runtime**.
 
@@ -9,13 +9,26 @@ It is exposed via the **Agent-to-Agent (A2A)** protocol, making it ready for mul
 
 ## 🏗️ Architecture & Database Integrations
 
-1. **Local Development (Mock Databases)**:
-   - **`data/team_members.json`**: Holds profiles, timezones, and weekly schedule availabilities.
-   - **`data/booked_meetings.json`**: Holds record of successfully scheduled and confirmed meetings.
+1. **Team profiles**:
+   - **`app/data/team_members.json`**: Holds profiles, timezones, and weekly schedule
+     availabilities. Override the directory with `DATA_DIR`.
 
-2. **BigQuery Integration via Model Context Protocol (MCP)**:
-   - In production, `sched_agent` integrates a **BigQuery MCP Server** connector (`bigquery_dataset.catering_options`). This allows querying live catering vendor menus and compatibility in BigQuery via MCP standard tools.
+2. **Bookings in Agent Platform Memory Bank**:
+   - Confirmed meetings are written to the Memory Bank of the engine named by
+     `GOOGLE_CLOUD_AGENT_ENGINE_ID`, under a constant team scope
+     (`app_name=sched_agent`, `user_id=team`) so every caller sees one shared
+     calendar. `app/bookings.py` calls the Memory Bank API directly.
+   - This is why the agent deploys to **Agent Runtime**: the runtime injects
+     `GOOGLE_CLOUD_AGENT_ENGINE_ID`, so the host *is* the memory host.
 
+3. **BigQuery Integration via Model Context Protocol (MCP)**:
+   - `sched_agent` spawns a **BigQuery MCP Server** over stdio and queries live
+     catering menus from the `catering.menu_items` table via standard MCP tools
+     (`run_query`, `get_table`, `list_tables_in_dataset`).
+   - For offline work, point `BIGQUERY_MCP_COMMAND` at
+     `agents/sched_agent/scripts/mock-bigquery-mcp`, which serves
+     `data/catering/catering_menu.json` from an in-process DuckDB so
+     `catering.menu_items` resolves unchanged.
 
 ---
 
@@ -24,43 +37,48 @@ It is exposed via the **Agent-to-Agent (A2A)** protocol, making it ready for mul
 The agent is equipped with custom python tools:
 - `get_team_members()`: Retrieves team member schedules, timezones, and availability.
 - `book_meeting(time_slot, restaurant, reason)`: Records a finalized meeting when the user confirms.
+- `get_bookings()`: Lists the team's existing bookings so the agent does not propose a slot that is already taken.
 
 ---
 
 ## 🚀 Local Development & Execution
 
-To initialize the virtual environment, synchronize dependencies, and start the agent:
+Run from the repository root. `uv` synchronizes the agent's dependencies and starts
+the A2A server:
 
-### 1. Synchronize the Workspace
-From the repository root, run:
 ```bash
-uv sync
+uv --directory agents/sched_agent run main.py
 ```
 
-### 2. Start the Agent A2A Server
-Run the agent server:
-```bash
-PORT=8081 uv run agents/sched_agent/main.py
+The server boots, exposes its schema, and listens on `0.0.0.0:8082`. Each agent
+carries its own `pyproject.toml`, so `--directory` is what selects the environment —
+a bare `uv run` or `uv sync` from the root fails with `No pyproject.toml found`.
+
+Retrieve its **Agent Card** at:
+
 ```
-The server will boot up, expose its schema, and list on `0.0.0.0:8081`. You can retrieve its **Agent Card** at:
-`http://localhost:8081/.well-known/agent-card.json`
+http://localhost:8082/a2a/app/.well-known/agent-card.json
+```
 
 ---
 
-## 🤖 Testing via the Agents CLI Playground
+## 🤖 Testing Interactively
 
-The easiest way to test this agent interactively is using the workspace's playground. 
+`main.py` serves the ADK dev UI alongside the A2A endpoints. With the agent running,
+open:
 
-1. From the repo root, run:
-   ```bash
-   uv run adk web agents/sched_agent
-   ```
-2. Open the playground in your browser and try interacting with it!
+```
+http://localhost:8082
+```
+
+> **Note:** use `main.py`, not `adk web`. Both serve the same ADK dev UI, but `adk web`
+> builds its own app via the ADK CLI and therefore skips `app/fast_api_app.py` — so the
+> A2A endpoints, the agent card and `/feedback` would not be served.
 
 ### Example Test Scenario:
 
 - **Prompt:** *"Hi, please help me schedule a meeting for Alice, Bob, and Charlie."*
 - **Expected Agent Action:** The agent loads the database, calculates joint free slots based on member availabilities, and proposes an optimal slot.
 - **Prompt:** *"That works perfectly, let's book it!"*
-- **Expected Agent Action:** The agent calls `book_meeting`, saves the record in `data/booked_meetings.json`, and returns the booking ID.
+- **Expected Agent Action:** The agent calls `book_meeting`, writes the record to the team-scoped Memory Bank, and returns the booking ID. Ask again in a fresh conversation and `get_bookings` returns the same slot.
 

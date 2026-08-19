@@ -10,7 +10,7 @@ The agent is exposed via the open **Agent-to-Agent (A2A)** protocol, allowing ot
 ## 🏛️ Architecture & Document Storage
 
 - **Local Development**: Reads strategy `.pdf` files from the local directory `agents/strat_agent/data/docs/`.
-- **Google Cloud Storage (GCS) Integration**: In production deployments, `strat_agent` connects to a designated GCS Bucket (`gs://$GOOGLE_CLOUD_PROJECT_ID-strategy-docs/`) to dynamically retrieve corporate strategy PDF documents for automated indexing and RAG processing.
+- **Google Cloud Storage (GCS) Integration**: optional. When `STRATEGY_DOCS_BUCKET` is set, `strat_agent` retrieves the strategy PDFs from that bucket (`gs://$GOOGLE_CLOUD_PROJECT_ID-strategy-docs/`) instead of the bundled copies. The switch is the variable alone; the code path is the same either way.
 
 ---
 
@@ -25,80 +25,72 @@ The agent is dynamically self-configuring and switches its document source based
 
 ### `.env` Parameters
 
-Create or update the `.env` file at the repository root:
+Configuration lives in the `.env` file at the repository root, shared by all three
+agents — see `.env.example` for the full set. The one variable specific to this agent
+is optional:
 
 ```env
 # (Optional) GCS bucket for production document storage
-STRATEGY_DOCS_BUCKET="your-gcs-bucket-name"
-
-# Port to listen on (Agent Runtime automatically injects this)
-PORT=8080
-
-# Gemini API Key or GCP Credentials
-GEMINI_API_KEY="your_gemini_api_key_here"
+export STRATEGY_DOCS_BUCKET="your-google-cloud-project-id-strategy-docs"
 ```
+
+`PORT` belongs in neither file: `main.py` defaults to 8081, and Agent Runtime injects
+it at deploy time. Setting it at the root would apply to all three agents at once.
 
 ---
 
 ## 🚀 Execution & Local Testing
 
-### Standard Execution
-
-To start the agent's server, run `uv run` from the repository root. `uv` will automatically synchronize the workspace dependencies and run the agent service:
+Run from the repository root. `uv` synchronizes the agent's dependencies and starts
+the A2A server:
 
 ```bash
-uv run agents/strat_agent/main.py
+uv --directory agents/strat_agent run main.py
 ```
 
----
-
-### Alternative: Manual Workspace Sync
-
-If you prefer to manually synchronize the workspace environment first:
-
-1. Synchronize the workspace dependencies:
-   ```bash
-   uv sync
-   ```
-
-2. Run the A2A Server:
-   ```bash
-   uv run agents/strat_agent/main.py
-   ```
-
-The server will start up and listen on `0.0.0.0:8080` (or the configured `PORT`).
+The server listens on `0.0.0.0:8081` (or the configured `PORT`). Each agent carries
+its own `pyproject.toml`, so `--directory` is what selects the environment — a bare
+`uv run` or `uv sync` from the root fails with `No pyproject.toml found`.
 
 ---
 
 ## 🛰️ A2A Integration
 
 When running, the agent automatically advertises its capabilities via an **Agent Card** at:
-- `http://localhost:8080/.well-known/agent-card.json`
 
-Other agents can call this agent programmatically using the ADK's `RemoteA2aAgent` class:
+```
+http://localhost:8081/a2a/app/.well-known/agent-card.json
+```
+
+Other agents reach it through the ADK's `RemoteA2aAgent`, which is attached as a
+sub-agent and invoked by the calling agent's model rather than called directly.
+`agents/luncher_agent/app/agent.py` wires it up this way:
 
 ```python
 from google.adk.agents.remote_a2a_agent import RemoteA2aAgent
 
-# Instantiate remote A2A connection
 strategy_agent = RemoteA2aAgent(
     name="strategy_agent",
-    description="Corporate Strategy Synthesizer",
-    agent_card="http://localhost:8080/.well-known/agent-card.json"
+    description=(
+        "Analyzes GeniCo corporate strategy and product initiative roadmaps. "
+        "Consult this agent for strategic context and launch schedules."
+    ),
+    agent_card="http://localhost:8081/a2a/app/.well-known/agent-card.json",
+    timeout=120.0,
 )
-
-# Invoke the strategy analysis
-result = strategy_agent.call("Please analyze the strategy documents and return a summary.")
-print(result)
 ```
 
 ---
 
 ## ☁️ Agent Runtime Deployment
 
-The agent is fully compatible with **Agent Runtime**, Google's fully-managed platform for hosting AI agents. To deploy:
+`agents-cli deploy` builds the container and wires the runtime; root `README.md`
+§3 has the sequence. Two things are specific to this agent:
 
-1. Containerize the application using standard Cloud Build.
-2. Deploy to Agent Runtime with `PORT` mapping.
-3. Configure the `STRATEGY_DOCS_BUCKET` env variable in your Deployment configuration.
-4. Ensure the Agent Runtime Service Account has `roles/storage.objectViewer` permissions on your GCS bucket.
+- **`STRATEGY_DOCS_BUCKET` is optional.** Unset, the agent reads the PDFs in
+  `data/docs/`, baked into the image. Never pass it empty — Agent Runtime
+  rejects an env var with no value and fails the deploy.
+- **When set**, the Agent Runtime service agent
+  `service-<PROJECT_NUMBER>@gcp-sa-aiplatform-re.iam.gserviceaccount.com` needs
+  `roles/storage.objectViewer` on the bucket; root README §3 step 1b grants it.
+  A bucket that is empty or unreadable raises rather than degrading.

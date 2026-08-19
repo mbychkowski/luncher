@@ -1,0 +1,299 @@
+[
+  {
+    "beginRendering": {
+      "surfaceId": "lunch-proposal",
+      "root": "proposal-card",
+      "styles": {
+        "primaryColor": "#8AB4F8",
+        "font": "Google Sans"
+      }
+    }
+  },
+  {
+    "surfaceUpdate": {
+      "surfaceId": "lunch-proposal",
+      "components": [
+        {
+          "id": "proposal-card",
+          "component": {
+            "Card": {
+              "child": "proposal-column"
+            }
+          }
+        },
+        {
+          "id": "proposal-column",
+          "component": {
+            "Column": {
+              "children": {
+                "explicitList": [
+                  "proposal-title",
+                  "strategy-rationale",
+                  "attendees-heading",
+                  "attendees-text",
+                  "slots-heading",
+                  "slot-picker",
+                  "menu-heading",
+                  "menu-list",
+                  "book-button"
+                ]
+              },
+              "alignment": "start"
+            }
+          }
+        },
+        {
+          "id": "proposal-title",
+          "component": {
+            "Text": {
+              "usageHint": "h1",
+              "text": {
+                "path": "/title"
+              }
+            }
+          }
+        },
+        {
+          "id": "strategy-rationale",
+          "component": {
+            "Text": {
+              "usageHint": "body",
+              "text": {
+                "path": "/rationale"
+              }
+            }
+          }
+        },
+        {
+          "id": "attendees-heading",
+          "component": {
+            "Text": {
+              "usageHint": "h3",
+              "text": {
+                "literalString": "Included Team Members"
+              }
+            }
+          }
+        },
+        {
+          "id": "attendees-text",
+          "component": {
+            "Text": {
+              "usageHint": "body",
+              "text": {
+                "path": "/attendees"
+              }
+            }
+          }
+        },
+        {
+          "id": "slots-heading",
+          "component": {
+            "Text": {
+              "usageHint": "h3",
+              "text": {
+                "literalString": "Proposed Time Slots"
+              }
+            }
+          }
+        },
+        {
+          "id": "slot-picker",
+          "component": {
+            "MultipleChoice": {
+              "selections": {
+                "path": "/selectedSlots"
+              },
+              "options": [
+                {
+                  "label": {
+                    "literalString": "Tue 12 Aug, 12:00-13:00"
+                  },
+                  "value": "2026-08-12T12:00"
+                },
+                {
+                  "label": {
+                    "literalString": "Wed 13 Aug, 12:30-13:30"
+                  },
+                  "value": "2026-08-13T12:30"
+                },
+                {
+                  "label": {
+                    "literalString": "Thu 14 Aug, 12:00-13:00"
+                  },
+                  "value": "2026-08-14T12:00"
+                }
+              ],
+              "maxAllowedSelections": 1,
+              "variant": "chips"
+            }
+          }
+        },
+        {
+          "id": "menu-heading",
+          "component": {
+            "Text": {
+              "usageHint": "h3",
+              "text": {
+                "literalString": "Catering Menu"
+              }
+            }
+          }
+        },
+        {
+          "id": "menu-list",
+          "component": {
+            "List": {
+              "direction": "vertical",
+              "children": {
+                "template": {
+                  "componentId": "menu-item-template",
+                  "dataBinding": "/menuItems"
+                }
+              },
+              "alignment": "start"
+            }
+          }
+        },
+        {
+          "id": "menu-item-template",
+          "component": {
+            "Column": {
+              "children": {
+                "explicitList": [
+                  "menu-item-name",
+                  "menu-item-note"
+                ]
+              },
+              "alignment": "start"
+            }
+          }
+        },
+        {
+          "id": "menu-item-name",
+          "component": {
+            "Text": {
+              "usageHint": "h5",
+              "text": {
+                "path": "/name"
+              }
+            }
+          }
+        },
+        {
+          "id": "menu-item-note",
+          "component": {
+            "Text": {
+              "usageHint": "caption",
+              "text": {
+                "path": "/dietaryNote"
+              }
+            }
+          }
+        },
+        {
+          "id": "book-button-text",
+          "component": {
+            "Text": {
+              "text": {
+                "literalString": "Book this lunch"
+              }
+            }
+          }
+        },
+        {
+          "id": "book-button",
+          "component": {
+            "Button": {
+              "child": "book-button-text",
+              "primary": true,
+              "action": {
+                "name": "book_lunch",
+                "context": [
+                  {
+                    "key": "selectedSlots",
+                    "value": {
+                      "path": "/selectedSlots"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "dataModelUpdate": {
+      "surfaceId": "lunch-proposal",
+      "path": "/",
+      "contents": [
+        {
+          "key": "title",
+          "valueString": "OmniChef Launch Alignment Lunch"
+        },
+        {
+          "key": "rationale",
+          "valueString": "To align with our strategy on the OmniChef launch, this lunch brings the product and engineering leads together ahead of the Q4 milestone review."
+        },
+        {
+          "key": "attendees",
+          "valueString": "Liam, Diego, Dan, Maya, Aaliyah, Naomi, Jordan, Kai"
+        },
+        {
+          "key": "selectedSlots",
+          "valueArray": [
+            {
+              "valueString": "2026-08-13T12:30"
+            }
+          ]
+        },
+        {
+          "key": "menuItems",
+          "valueMap": [
+            {
+              "key": "item1",
+              "valueMap": [
+                {
+                  "key": "name",
+                  "valueString": "Mediterranean mezze platter"
+                },
+                {
+                  "key": "dietaryNote",
+                  "valueString": "Vegetarian, dairy-free option available"
+                }
+              ]
+            },
+            {
+              "key": "item2",
+              "valueMap": [
+                {
+                  "key": "name",
+                  "valueString": "Grilled chicken and quinoa bowls"
+                },
+                {
+                  "key": "dietaryNote",
+                  "valueString": "Gluten-free"
+                }
+              ]
+            },
+            {
+              "key": "item3",
+              "valueMap": [
+                {
+                  "key": "name",
+                  "valueString": "Seasonal fruit and sorbet"
+                },
+                {
+                  "key": "dietaryNote",
+                  "valueString": "Dairy-free, nut-free"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

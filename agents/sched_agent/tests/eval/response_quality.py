@@ -1,8 +1,21 @@
 """Local LLM-as-judge for `custom_response_quality` (see eval_config.yaml)."""
 
+import os
+
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
+
+# Follows the agents' own configuration rather than pinning its own. The model
+# they run is served only from the `global` endpoint, and a regional one answers
+# 404 "Publisher model ... was not found", which reads as a bad model name.
+_MODEL = os.getenv("GOOGLE_GENAI_MODEL", "gemini-3.6-flash")
+
+
+def _client() -> genai.Client:
+    if os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true":
+        return genai.Client(location=os.getenv("GOOGLE_GENAI_LOCATION", "global"))
+    return genai.Client()  # AI Studio (GEMINI_API_KEY)
 
 
 class _Verdict(BaseModel):
@@ -30,9 +43,11 @@ def evaluate(instance):
         prompt += f"Expected Answer (ground truth): {reference}\n"
     prompt += f"Full Agent Trace: {instance.get('agent_data', '')}\n"
 
-    client = genai.Client()  # AI Studio (GEMINI_API_KEY) or Agent Platform (ADC)
+    # Held in a local: the client owns the transport, and letting it go out of
+    # scope mid-call closes it under the request.
+    client = _client()
     response = client.models.generate_content(
-        model="gemini-flash-latest",
+        model=_MODEL,
         contents=prompt,
         config=types.GenerateContentConfig(
             temperature=0,  # deterministic grading

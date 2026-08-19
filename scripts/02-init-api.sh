@@ -46,6 +46,7 @@ for GOOGLE_CLOUD_API in \
   storage.googleapis.com \
   aiplatform.googleapis.com \
   bigquery.googleapis.com \
+  apphub.googleapis.com \
     ; do
   echo "Enabling ${GOOGLE_CLOUD_API}..."
   gcloud services enable --project "${GOOGLE_CLOUD_PROJECT_ID}" "${GOOGLE_CLOUD_API}"
@@ -87,4 +88,32 @@ if [ -f "${MENU_DATA_FILE}" ]; then
   echo "BigQuery table '${DATASET_ID}.${TABLE_ID}' successfully populated."
 else
   echo "Warning: Catering menu data file '${MENU_DATA_FILE}' not found. Skipping table population."
+fi
+# ==============================================================================
+# Agent Engine holding the orchestrator's Sessions and Memory Bank
+# ==============================================================================
+# The orchestrator runs on Cloud Run, which injects no engine id, so it needs an
+# engine of its own. An engine with no packaged code is a valid target for both.
+ENGINE_DISPLAY_NAME="luncher-agent"
+ENGINE_API="https://${GOOGLE_CLOUD_LOCATION}-aiplatform.googleapis.com/v1/projects/${GOOGLE_CLOUD_PROJECT_ID}/locations/${GOOGLE_CLOUD_LOCATION}/reasoningEngines"
+ENGINE_TOKEN=$(gcloud auth print-access-token)
+
+echo "Initializing Agent Engine '${ENGINE_DISPLAY_NAME}' in ${GOOGLE_CLOUD_LOCATION}..."
+EXISTING_ENGINE=$(curl -s -H "Authorization: Bearer ${ENGINE_TOKEN}" "${ENGINE_API}" \
+  | jq -r --arg n "${ENGINE_DISPLAY_NAME}" \
+      '.reasoningEngines[]? | select(.displayName==$n) | .name' | head -1)
+
+if [ -n "${EXISTING_ENGINE}" ]; then
+  echo "Agent Engine '${ENGINE_DISPLAY_NAME}' already exists: ${EXISTING_ENGINE##*/}"
+else
+  ENGINE_ERR=$(curl -s -X POST \
+    -H "Authorization: Bearer ${ENGINE_TOKEN}" \
+    -H "Content-Type: application/json" \
+    -d "{\"displayName\":\"${ENGINE_DISPLAY_NAME}\"}" \
+    "${ENGINE_API}" | jq -r '.error.message // empty')
+  if [ -n "${ENGINE_ERR}" ]; then
+    echo "Error: could not create Agent Engine '${ENGINE_DISPLAY_NAME}': ${ENGINE_ERR}"
+    exit 1
+  fi
+  echo "Agent Engine '${ENGINE_DISPLAY_NAME}' created."
 fi

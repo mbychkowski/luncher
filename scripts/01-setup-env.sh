@@ -53,15 +53,20 @@ _GOOGLE_CLOUD_LOCATION=$(gcloud config get-value compute/region 2>/dev/null || e
 _GOOGLE_CLOUD_LOCATION=${_GOOGLE_CLOUD_LOCATION:-us-central1}
 _GOOGLE_GENAI_LOCATION=${GOOGLE_GENAI_LOCATION:-global}
 _BIGQUERY_LOCATION=${BIGQUERY_LOCATION:-US}
+# `|| true`: pipefail would abort the script when .env.example is not present.
+_EXAMPLE_MODEL=$(sed -n 's/^export GOOGLE_GENAI_MODEL="\([^"]*\)".*/\1/p' .env.example 2>/dev/null | head -n 1 || true)
+_GOOGLE_GENAI_MODEL=${GOOGLE_GENAI_MODEL:-${_EXAMPLE_MODEL:-gemini-3.6-flash}}
 
 read -r -p "Enter GCP Project ID [${_GOOGLE_CLOUD_PROJECT_ID}]: " GOOGLE_CLOUD_PROJECT_ID || true
 read -r -p "Enter GCP Deployment Location/Region [${_GOOGLE_CLOUD_LOCATION}]: " GOOGLE_CLOUD_LOCATION || true
 read -r -p "Enter Gemini Model Location [${_GOOGLE_GENAI_LOCATION}]: " GOOGLE_GENAI_LOCATION || true
+read -r -p "Enter Gemini Model [${_GOOGLE_GENAI_MODEL}]: " GOOGLE_GENAI_MODEL || true
 read -r -p "Enter BigQuery Location [${_BIGQUERY_LOCATION}]: " BIGQUERY_LOCATION || true
 
 GOOGLE_CLOUD_PROJECT_ID="${GOOGLE_CLOUD_PROJECT_ID:-${_GOOGLE_CLOUD_PROJECT_ID}}"
 GOOGLE_CLOUD_LOCATION="${GOOGLE_CLOUD_LOCATION:-${_GOOGLE_CLOUD_LOCATION}}"
 GOOGLE_GENAI_LOCATION="${GOOGLE_GENAI_LOCATION:-${_GOOGLE_GENAI_LOCATION}}"
+GOOGLE_GENAI_MODEL="${GOOGLE_GENAI_MODEL:-${_GOOGLE_GENAI_MODEL}}"
 BIGQUERY_LOCATION="${BIGQUERY_LOCATION:-${_BIGQUERY_LOCATION}}"
 
 if [ -z "$GOOGLE_CLOUD_PROJECT_ID" ]; then
@@ -70,18 +75,30 @@ if [ -z "$GOOGLE_CLOUD_PROJECT_ID" ]; then
 fi
 
 echo "Setting gcloud defaults..."
-gcloud config set project "${GOOGLE_CLOUD_PROJECT_ID}" >/dev/null 2>&1
+# --verbosity=error prevents informational/success messages from printing to stderr
+if ! gcloud config set project "${GOOGLE_CLOUD_PROJECT_ID}" --verbosity=error > /dev/null; then
+  # gcloud itself automatically prints the failure message to stderr if an error occurs
+  exit 1
+fi
 
 cat << EOF > .env
 export GOOGLE_GENAI_USE_VERTEXAI="true"
 export GOOGLE_CLOUD_PROJECT_ID="${GOOGLE_CLOUD_PROJECT_ID}"
 export GOOGLE_CLOUD_LOCATION="${GOOGLE_CLOUD_LOCATION}"
 export GOOGLE_GENAI_LOCATION="${GOOGLE_GENAI_LOCATION}"
+export GOOGLE_GENAI_MODEL="${GOOGLE_GENAI_MODEL}"
 export BIGQUERY_LOCATION="${BIGQUERY_LOCATION}"
 
 # Prevent google.auth.exceptions.MutualTLSChannelError by disabling mTLS auto-discovery:
 export GOOGLE_API_USE_CLIENT_CERTIFICATE="false"
 export GOOGLE_API_USE_MTLS_ENDPOINT="never"
+
+# Optional:
+# export BIGQUERY_MCP_COMMAND="${PWD}/agents/sched_agent/scripts/mock-bigquery-mcp"
+
+# Runtime wiring (STRATEGY_AGENT_URL, SCHEDULING_AGENT_URL, APP_URL,
+# GOOGLE_CLOUD_AGENT_ENGINE_ID) is passed by \`agents-cli deploy\`, not set here.
+# See .env.example.
 EOF
 
 cat << EOF
@@ -94,6 +111,7 @@ GOOGLE_GENAI_USE_VERTEXAI="true"
 GOOGLE_CLOUD_PROJECT_ID="${GOOGLE_CLOUD_PROJECT_ID}"
 GOOGLE_CLOUD_LOCATION="${GOOGLE_CLOUD_LOCATION}"
 GOOGLE_GENAI_LOCATION="${GOOGLE_GENAI_LOCATION}"
+GOOGLE_GENAI_MODEL="${GOOGLE_GENAI_MODEL}"
 BIGQUERY_LOCATION="${BIGQUERY_LOCATION}"
 
 ----------------------------------------

@@ -35,7 +35,8 @@ from app.app_utils.telemetry import (
 )
 from app.app_utils.typing import Feedback
 
-load_dotenv()
+# override=True: a stale shell export must not beat .env.
+load_dotenv(override=True)
 setup_telemetry()
 # Must run before get_fast_api_app to set the tracer provider resource.
 setup_agent_engine_telemetry()

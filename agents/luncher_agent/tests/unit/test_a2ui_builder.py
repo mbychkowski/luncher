@@ -21,10 +21,6 @@ SLOTS = [
     {"label": "Tue 12 Aug, 12:00-13:00", "value": "2026-08-12T12:00"},
     {"label": "Wed 13 Aug, 12:30-13:30", "value": "2026-08-13T12:30"},
 ]
-MENU = [
-    {"name": "Mezze platter", "dietary_note": "Vegetarian, dairy-free option"},
-    {"name": "Quinoa bowls", "dietary_note": "Gluten-free"},
-]
 
 
 def _build(**overrides) -> list:
@@ -34,7 +30,6 @@ def _build(**overrides) -> list:
         attendees=["Liam", "Diego", "Maya"],
         time_slots=SLOTS,
         recommended_slot="2026-08-12T12:00",
-        menu_items=MENU,
     )
     kwargs.update(overrides)
     return build_lunch_surface(**kwargs)
@@ -112,8 +107,6 @@ def test_tool_returns_error_text_instead_of_raising() -> None:
         slot_values=[s["value"] for s in SLOTS],
         slot_absentees=["" for _ in SLOTS],
         recommended_slot="nope",
-        menu_names=[m["name"] for m in MENU],
-        menu_notes=[m["dietary_note"] for m in MENU],
         tool_context=ctx,
     )
 
@@ -133,8 +126,6 @@ def test_tool_stores_payload_in_state() -> None:
         slot_values=[s["value"] for s in SLOTS],
         slot_absentees=["" for _ in SLOTS],
         recommended_slot="2026-08-12T12:00",
-        menu_names=[m["name"] for m in MENU],
-        menu_notes=[m["dietary_note"] for m in MENU],
         tool_context=ctx,
     )
 
@@ -175,8 +166,6 @@ def _propose(ctx: MagicMock, attendees: list[str]) -> str:
         slot_values=[s["value"] for s in SLOTS],
         slot_absentees=["" for _ in SLOTS],
         recommended_slot="2026-08-12T12:00",
-        menu_names=[m["name"] for m in MENU],
-        menu_notes=[m["dietary_note"] for m in MENU],
         tool_context=ctx,
     )
 
@@ -266,8 +255,6 @@ def test_absentees_must_match_the_slot_count() -> None:
         slot_values=[s["value"] for s in SLOTS],
         slot_absentees=["Kai"],
         recommended_slot="2026-08-12T12:00",
-        menu_names=[m["name"] for m in MENU],
-        menu_notes=[m["dietary_note"] for m in MENU],
         tool_context=ctx,
     )
 
@@ -287,8 +274,6 @@ def test_invented_absentees_are_refused() -> None:
         slot_values=[s["value"] for s in SLOTS],
         slot_absentees=["", "Priya Patel and Kai"],
         recommended_slot="2026-08-12T12:00",
-        menu_names=[m["name"] for m in MENU],
-        menu_notes=[m["dietary_note"] for m in MENU],
         tool_context=ctx,
     )
 
@@ -526,8 +511,6 @@ def test_tool_rejects_mismatched_pair_lengths() -> None:
         slot_values=["2026-08-12T12:00"],
         slot_absentees=["", ""],
         recommended_slot="2026-08-12T12:00",
-        menu_names=["m"],
-        menu_notes=["n"],
         tool_context=ctx,
     )
 

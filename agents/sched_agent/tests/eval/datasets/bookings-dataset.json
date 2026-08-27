@@ -6,7 +6,7 @@
         "role": "user",
         "parts": [
           {
-            "text": "Find a time for a team lunch next week and suggest what we could eat."
+            "text": "Find a time for a team meeting next week."
           }
         ]
       },
@@ -15,7 +15,7 @@
           "role": "model",
           "parts": [
             {
-              "text": "A ranked shortlist of 2-4 time slots, each with how many of the team are free, a recommendation with a reason, and catering options drawn from the catering.menu_items table."
+              "text": "A ranked shortlist of 2-4 time slots, each with how many of the team are free, ending with 'You might want to order some food for this meeting.'"
             }
           ]
         }
@@ -27,7 +27,7 @@
         "role": "user",
         "parts": [
           {
-            "text": "Friday 12:00-13:00 works. Book it with the Fiesta Taco Bar."
+            "text": "Friday 12:00-13:00 works. Book it."
           }
         ]
       },
@@ -36,7 +36,7 @@
           "role": "model",
           "parts": [
             {
-              "text": "A confirmation that the meeting was booked for Friday 12:00-13:00 with Fiesta Taco Bar catering, quoting the booking id returned by book_meeting."
+              "text": "A confirmation that the meeting was booked for Friday 12:00-13:00, quoting the booking id returned by book_meeting, and ending with 'You might want to order some food for this meeting.'"
             }
           ]
         }
@@ -48,7 +48,7 @@
         "role": "user",
         "parts": [
           {
-            "text": "What lunches has the team already booked?"
+            "text": "What meetings has the team already booked?"
           }
         ]
       },
@@ -57,7 +57,7 @@
           "role": "model",
           "parts": [
             {
-              "text": "The bookings get_bookings returns, each with its time slot and catering, or a plain statement that nothing is booked. Bookings are team-wide, so the answer does not depend on who is asking."
+              "text": "The bookings get_bookings returns, each with its time slot and booking id, or a plain statement that nothing is booked. Bookings are team-wide, so the answer does not depend on who is asking."
             }
           ]
         }

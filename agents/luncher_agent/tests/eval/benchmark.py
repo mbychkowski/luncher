@@ -28,13 +28,11 @@ from app.a2ui import A2UI_FORMAT, find_binding_problems  # noqa: E402
 from app.agent import synthesizer_agent  # noqa: E402
 
 CONTEXT = (
-    "Retrieved preferences: Maya (dairy allergy), Jordan (vegetarian), Kai (gluten-free).\n"
     "Strategic priorities: the OmniChef smart-kitchen launch is the Q4 priority; "
     "VisionSphere beta follows in Q1.\n"
     "Team availability: Tue 12 Aug 12:00-13:00 (8 of 8 free), Wed 13 Aug 12:30-13:30 "
     "(7 of 8), Thu 14 Aug 12:00-13:00 (6 of 8).\n"
-    "Team: Liam, Diego, Dan, Maya, Aaliyah, Naomi, Jordan, Kai.\n"
-    "Catering options: mezze platter, grilled chicken quinoa bowls, seasonal fruit."
+    "Team: Liam, Diego, Dan, Maya, Aaliyah, Naomi, Jordan, Kai."
 )
 
 

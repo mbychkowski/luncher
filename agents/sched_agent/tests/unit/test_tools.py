@@ -34,7 +34,7 @@ def test_get_team_members() -> None:
 
 
 def test_book_meeting() -> None:
-    res = asyncio.run(book_meeting("Monday 10:00-11:00 AM", "Fiesta Tacos", "Test booking"))
+    res = asyncio.run(book_meeting("Monday 10:00-11:00 AM", "Test booking"))
     assert "Successfully booked!" in res
     assert "bk_" in res
 
@@ -44,7 +44,7 @@ def test_get_bookings_empty() -> None:
 
 
 def test_get_bookings_lists_what_was_booked() -> None:
-    asyncio.run(book_meeting("Friday 12:00-13:00", "Fiesta Tacos", "Team lunch"))
+    asyncio.run(book_meeting("Friday 12:00-13:00", "Team lunch"))
     listed = asyncio.run(get_bookings())
     assert "Friday 12:00-13:00" in listed
-    assert "Fiesta Tacos" in listed
+    assert "Team lunch" in listed

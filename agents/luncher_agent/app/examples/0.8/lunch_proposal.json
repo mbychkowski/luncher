@@ -33,8 +33,9 @@
                   "attendees-text",
                   "slots-heading",
                   "slot-picker",
-                  "menu-heading",
-                  "menu-list",
+                  "absence-heading",
+                  "absence-list",
+                  "food-note",
                   "book-button"
                 ]
               },
@@ -46,10 +47,10 @@
           "id": "proposal-title",
           "component": {
             "Text": {
-              "usageHint": "h1",
               "text": {
                 "path": "/title"
-              }
+              },
+              "usageHint": "h1"
             }
           }
         },
@@ -57,10 +58,10 @@
           "id": "strategy-rationale",
           "component": {
             "Text": {
-              "usageHint": "body",
               "text": {
                 "path": "/rationale"
-              }
+              },
+              "usageHint": "body"
             }
           }
         },
@@ -68,10 +69,10 @@
           "id": "attendees-heading",
           "component": {
             "Text": {
-              "usageHint": "h3",
               "text": {
                 "literalString": "Included Team Members"
-              }
+              },
+              "usageHint": "h3"
             }
           }
         },
@@ -79,10 +80,10 @@
           "id": "attendees-text",
           "component": {
             "Text": {
-              "usageHint": "body",
               "text": {
                 "path": "/attendees"
-              }
+              },
+              "usageHint": "body"
             }
           }
         },
@@ -90,10 +91,10 @@
           "id": "slots-heading",
           "component": {
             "Text": {
-              "usageHint": "h3",
               "text": {
                 "literalString": "Proposed Time Slots"
-              }
+              },
+              "usageHint": "h3"
             }
           }
         },
@@ -130,25 +131,25 @@
           }
         },
         {
-          "id": "menu-heading",
+          "id": "absence-heading",
           "component": {
             "Text": {
-              "usageHint": "h3",
               "text": {
-                "literalString": "Catering Menu"
-              }
+                "literalString": "Who Can't Make It"
+              },
+              "usageHint": "h3"
             }
           }
         },
         {
-          "id": "menu-list",
+          "id": "absence-list",
           "component": {
             "List": {
               "direction": "vertical",
               "children": {
                 "template": {
-                  "componentId": "menu-item-template",
-                  "dataBinding": "/menuItems"
+                  "componentId": "absence-item-template",
+                  "dataBinding": "/slotAbsences"
                 }
               },
               "alignment": "start"
@@ -156,13 +157,13 @@
           }
         },
         {
-          "id": "menu-item-template",
+          "id": "absence-item-template",
           "component": {
             "Column": {
               "children": {
                 "explicitList": [
-                  "menu-item-name",
-                  "menu-item-note"
+                  "absence-item-slot",
+                  "absence-item-who"
                 ]
               },
               "alignment": "start"
@@ -170,24 +171,35 @@
           }
         },
         {
-          "id": "menu-item-name",
+          "id": "absence-item-slot",
           "component": {
             "Text": {
-              "usageHint": "h5",
               "text": {
-                "path": "/name"
-              }
+                "path": "/slot"
+              },
+              "usageHint": "h5"
             }
           }
         },
         {
-          "id": "menu-item-note",
+          "id": "absence-item-who",
           "component": {
             "Text": {
-              "usageHint": "caption",
               "text": {
-                "path": "/dietaryNote"
-              }
+                "path": "/who"
+              },
+              "usageHint": "caption"
+            }
+          }
+        },
+        {
+          "id": "food-note",
+          "component": {
+            "Text": {
+              "text": {
+                "literalString": "You might want to order some food for this meeting."
+              },
+              "usageHint": "body"
             }
           }
         },
@@ -215,6 +227,12 @@
                     "value": {
                       "path": "/selectedSlots"
                     }
+                  },
+                  {
+                    "key": "title",
+                    "value": {
+                      "path": "/title"
+                    }
                   }
                 ]
               }
@@ -235,7 +253,7 @@
         },
         {
           "key": "rationale",
-          "valueString": "To align with our strategy on the OmniChef launch, this lunch brings the product and engineering leads together ahead of the Q4 milestone review."
+          "valueString": "Align team on Q4 OmniChef milestones"
         },
         {
           "key": "attendees",
@@ -243,51 +261,52 @@
         },
         {
           "key": "selectedSlots",
-          "valueArray": [
+          "valueMap": [
             {
-              "valueString": "2026-08-13T12:30"
+              "key": "0",
+              "valueString": "2026-08-12T12:00"
             }
           ]
         },
         {
-          "key": "menuItems",
+          "key": "slotAbsences",
           "valueMap": [
             {
-              "key": "item1",
+              "key": "slot1",
               "valueMap": [
                 {
-                  "key": "name",
-                  "valueString": "Mediterranean mezze platter"
+                  "key": "slot",
+                  "valueString": "Tue 12 Aug, 12:00-13:00"
                 },
                 {
-                  "key": "dietaryNote",
-                  "valueString": "Vegetarian, dairy-free option available"
+                  "key": "who",
+                  "valueString": "Everyone can attend"
                 }
               ]
             },
             {
-              "key": "item2",
+              "key": "slot2",
               "valueMap": [
                 {
-                  "key": "name",
-                  "valueString": "Grilled chicken and quinoa bowls"
+                  "key": "slot",
+                  "valueString": "Wed 13 Aug, 12:30-13:30"
                 },
                 {
-                  "key": "dietaryNote",
-                  "valueString": "Gluten-free"
+                  "key": "who",
+                  "valueString": "Naomi (busy)"
                 }
               ]
             },
             {
-              "key": "item3",
+              "key": "slot3",
               "valueMap": [
                 {
-                  "key": "name",
-                  "valueString": "Seasonal fruit and sorbet"
+                  "key": "slot",
+                  "valueString": "Thu 14 Aug, 12:00-13:00"
                 },
                 {
-                  "key": "dietaryNote",
-                  "valueString": "Dairy-free, nut-free"
+                  "key": "who",
+                  "valueString": "Diego, Dan (busy)"
                 }
               ]
             }

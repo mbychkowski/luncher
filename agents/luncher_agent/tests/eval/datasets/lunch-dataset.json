@@ -15,49 +15,7 @@
           "role": "model",
           "parts": [
             {
-              "text": "A lunch proposal naming a strategic objective, listing every attendee, offering time slots and a catering menu."
-            }
-          ]
-        }
-      }
-    },
-    {
-      "eval_case_id": "conflicting_restrictions",
-      "prompt": {
-        "role": "user",
-        "parts": [
-          {
-            "text": "Plan a team lunch. Maya is allergic to dairy, Jordan is vegan, and Kai is gluten-free. Everyone must be able to eat."
-          }
-        ]
-      },
-      "reference": {
-        "response": {
-          "role": "model",
-          "parts": [
-            {
-              "text": "Every menu item must be safe for a dairy allergy, vegan and gluten-free diner, or the menu must clearly cover each restriction with at least one suitable dish. No dish may contain dairy, meat or gluten without that being called out."
-            }
-          ]
-        }
-      }
-    },
-    {
-      "eval_case_id": "no_saved_preferences",
-      "prompt": {
-        "role": "user",
-        "parts": [
-          {
-            "text": "Set up a lunch for the team next Tuesday. I don't think we've recorded anyone's dietary needs yet."
-          }
-        ]
-      },
-      "reference": {
-        "response": {
-          "role": "model",
-          "parts": [
-            {
-              "text": "A proposal that still renders correctly with no stored preferences, choosing a broadly inclusive menu rather than inventing restrictions."
+              "text": "A lunch proposal naming a strategic objective, listing every attendee, offering time slots and the food reminder note."
             }
           ]
         }
@@ -100,27 +58,6 @@
           "parts": [
             {
               "text": "A proposal with exactly one time slot offered and recommended; the picker must still render correctly with a single option."
-            }
-          ]
-        }
-      }
-    },
-    {
-      "eval_case_id": "save_preference_then_plan",
-      "prompt": {
-        "role": "user",
-        "parts": [
-          {
-            "text": "Aaliyah has a severe nut allergy - please remember that. Then plan a team lunch for next week."
-          }
-        ]
-      },
-      "reference": {
-        "response": {
-          "role": "model",
-          "parts": [
-            {
-              "text": "The nut allergy is saved to memory and the proposed catering menu is nut-free, with the restriction surfaced against the relevant items."
             }
           ]
         }
@@ -175,7 +112,7 @@
           "role": "model",
           "parts": [
             {
-              "text": "A re-rendered proposal recommending Wednesday, still offering the other slots, and preserving the strategic framing and menu."
+              "text": "A re-rendered proposal recommending Wednesday, still offering the other slots, and preserving the strategic framing."
             }
           ]
         }

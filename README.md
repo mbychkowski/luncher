@@ -4,7 +4,7 @@ Luncher is an enterprise multi-agent application built on the **Google Agent Dev
 
 It coordinates strategy-aligned team lunch meetings by orchestrating two specialized sub-agents:
 - 🎯 **Strategy Agent** (`strat_agent`): Analyzes corporate strategy documents and product launch roadmaps.
-- 📅 **Scheduling Agent** (`sched_agent`): Coordinates team member availability, dietary constraints, and catering choices.
+- 📅 **Scheduling Agent** (`sched_agent`): Coordinates team member availability, calendars, and bookings.
 - 👑 **Luncher Orchestrator** (`luncher_agent`): The primary user-facing frontend agent that delegates tasks to the Strategy and Scheduling agents and synthesizes cohesive recommendations.
 
 ---
@@ -32,10 +32,9 @@ and Linux).
 
 ## 🏛️ Agent Architecture Diagram
 
-Stage 1 gathers from three sub-agents concurrently: `memory_agent` runs in-process,
-while `strategy_agent` and `scheduling_agent` are remote A2A peers. Stage 2's
-`lunch_synthesizer` runs in the orchestrator's own process and renders the A2UI
-surface — which is why the orchestrator must be on Cloud Run (see Step 1).
+Stage 1 gathers from two sub-agents concurrently: `strategy_agent` and `scheduling_agent`
+are remote A2A peers. Stage 2's `lunch_synthesizer` runs in the orchestrator's own process
+and renders the A2UI surface — which is why the orchestrator must be on Cloud Run (see Step 1).
 
 ```mermaid
 graph TD
@@ -44,11 +43,9 @@ graph TD
     subgraph LuncherProcess ["👑 Luncher Orchestrator (Cloud Run)"]
         LuncherSeq["luncher_agent (SequentialAgent)"]
         ParallelGatherer["parallel_info_gatherer (ParallelAgent)"]
-        MemAgent["memory_agent (in-process)<br/>load_memory / save_food_preference"]
         Synthesizer["lunch_synthesizer<br/>propose_lunch → A2UI v0.8"]
 
         LuncherSeq -->|Stage 1| ParallelGatherer
-        ParallelGatherer --> MemAgent
         LuncherSeq -->|Stage 2| Synthesizer
     end
 
@@ -63,7 +60,7 @@ graph TD
     subgraph SchedAgent ["📅 Scheduling Agent (Agent Runtime)"]
         SchedA2A["A2A FastAPI Endpoint"]
         SchedLLM["Gemini Model"]
-        SchedTools["🛠️ Tools:<br/>• get_team_members()<br/>• book_meeting()<br/>• get_bookings()"]
+        SchedTools["🛠️ Tools:<br/>• get_team_members()<br/>• book_meeting()<br/>• get_bookings()<br/>• cancel_booking()"]
         SchedA2A --> SchedLLM
         SchedLLM --> SchedTools
     end
@@ -78,10 +75,9 @@ graph TD
     StratTools -->|PDF Document Read| GCS
     SchedTools -->|Catering & Menu Query| BQ
     SchedTools -->|Team bookings<br/>scope: sched_agent / team| MemBank
-    MemAgent -->|Food preferences<br/>scope: luncher_agent / user| MemBank
 
     StratA2A -->|3a. Strategic Context| ParallelGatherer
-    SchedA2A -->|3b. Availability & Menu| ParallelGatherer
+    SchedA2A -->|3b. Availability & Bookings| ParallelGatherer
 
     ParallelGatherer -->|4. Combined Context Handoff| Synthesizer
     Synthesizer -->|5. A2UI Proposal Response| User
@@ -385,9 +381,9 @@ LUNCHER_URL="https://luncher-agent-$(gcloud projects describe "$GOOGLE_CLOUD_PRO
 ```
 
 > **Important:** give the orchestrator its **own** engine, never `sched_agent`'s — the variable
-> selects the session store as well as the memory store. Omit it and
-> `get_memory_service()` silently falls back to `InMemoryMemoryService`, losing
-> every saved food preference on the next cold start with no error logged.
+> selects the session store. Omit it and
+> `get_session_service()` silently falls back to `InMemorySessionService`, losing
+> session state across restarts.
 
 The orchestrator's own agent card is served at `/a2a/luncher_agent/.well-known/agent-card.json`
 (the path carries the ADK `App` name), while both sub-agents serve theirs at `/a2a/app/...`.
@@ -568,13 +564,12 @@ gcloud run services delete luncher-agent --region "$GOOGLE_CLOUD_LOCATION" --pro
 #    these and agents-cli has no delete command, so resolve them over REST.
 #    Matching on display name leaves any unrelated engine in the project alone.
 #    force=true also drops each engine's sessions and memories -- for sched-agent
-#    that is every team booking, for luncher-agent every saved food preference.
-#    Neither is recoverable.
+#    that is every team booking.
 API="https://${GOOGLE_CLOUD_LOCATION}-aiplatform.googleapis.com/v1/projects/${GOOGLE_CLOUD_PROJECT_ID}/locations/${GOOGLE_CLOUD_LOCATION}/reasoningEngines"
 TOKEN=$(gcloud auth print-access-token)
 
 # luncher-agent's engine survives the move to Cloud Run because it still holds
-# that agent's sessions and Memory Bank -- drop it from the list to keep them.
+# that agent's sessions -- drop it from the list to keep them.
 for NAME in strat-agent sched-agent luncher-agent; do
   ENGINE=$(curl -s -H "Authorization: Bearer ${TOKEN}" "$API" \
     | jq -r --arg n "$NAME" '.reasoningEngines[]? | select(.displayName==$n) | .name')

@@ -1,6 +1,6 @@
 # 📅 Meeting Scheduling Agent
 
-An agentic application built using the Google Agent Development Kit (ADK) that interactively schedules team meetings based on overlapping weekly schedules and timezones, and records confirmed bookings in a shared team calendar. Per-user food preferences and conversational memories are maintained centrally by `luncher_agent`.
+An agentic application built using the Google Agent Development Kit (ADK) that interactively schedules team meetings based on overlapping weekly schedules and timezones, and records confirmed bookings in a shared team calendar.
 
 It is exposed via the **Agent-to-Agent (A2A)** protocol, making it ready for multi-agent collaboration and fully compatible with Google's managed **Agent Runtime**.
 
@@ -22,13 +22,11 @@ It is exposed via the **Agent-to-Agent (A2A)** protocol, making it ready for mul
      `GOOGLE_CLOUD_AGENT_ENGINE_ID`, so the host *is* the memory host.
 
 3. **BigQuery Integration via Model Context Protocol (MCP)**:
-   - `sched_agent` spawns a **BigQuery MCP Server** over stdio and queries live
-     catering menus from the `catering.menu_items` table via standard MCP tools
-     (`run_query`, `get_table`, `list_tables_in_dataset`).
-   - For offline work, point `BIGQUERY_MCP_COMMAND` at
+   - `sched_agent` supports querying BigQuery tables via the **BigQuery MCP Server** over stdio.
+   - For offline or local testing, point `BIGQUERY_MCP_COMMAND` at
      `agents/sched_agent/scripts/mock-bigquery-mcp`, which serves
-     `data/catering/catering_menu.json` from an in-process DuckDB so
-     `catering.menu_items` resolves unchanged.
+     `data/catering/catering_menu.json` from a local SQLite stand-in so
+     queries resolve without an active GCP BigQuery connection.
 
 ---
 
@@ -36,8 +34,10 @@ It is exposed via the **Agent-to-Agent (A2A)** protocol, making it ready for mul
 
 The agent is equipped with custom python tools:
 - `get_team_members()`: Retrieves team member schedules, timezones, and availability.
-- `book_meeting(time_slot, restaurant, reason)`: Records a finalized meeting when the user confirms.
+- `book_meeting(time_slot, reason)`: Records a finalized meeting when the user confirms.
 - `get_bookings()`: Lists the team's existing bookings so the agent does not propose a slot that is already taken.
+- `cancel_booking(booking_id)`: Cancels a booking by its id, freeing the slot for everyone.
+- `cancel_all_bookings(expected_count)`: Clears the team's calendar after confirmation.
 
 ---
 

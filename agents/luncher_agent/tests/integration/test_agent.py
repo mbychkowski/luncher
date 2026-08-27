@@ -21,12 +21,7 @@ from app.app_utils import services
 
 
 def build_runner() -> Runner:
-    """Wire the runner the way fast_api_app does.
-
-    memory_agent calls `load_memory`, which raises "Memory service is not
-    available" without a memory service, aborting the parallel stage before the
-    synthesizer -- so the run yields no text at all.
-    """
+    """Wire the runner the way fast_api_app does."""
     return Runner(
         app=adk_app,
         session_service=services.get_session_service(),
@@ -70,27 +65,3 @@ def test_agent_stream() -> None:
             has_text_content = True
             break
     assert has_text_content, "Expected at least one message with text content"
-
-
-def test_agent_save_preference_stream() -> None:
-    """
-    Integration test verifying agent execution when user inputs a food preference.
-    """
-    runner = build_runner()
-    session = runner.session_service.create_session_sync(
-        user_id="test_user", app_name=adk_app.name
-    )
-
-    message = types.Content(
-        role="user", parts=[types.Part.from_text(text="Alice is allergic to shellfish")]
-    )
-
-    events = list(
-        runner.run(
-            new_message=message,
-            user_id="test_user",
-            session_id=session.id,
-            run_config=RunConfig(streaming_mode=StreamingMode.SSE),
-        )
-    )
-    assert len(events) > 0, "Expected at least one event from runner"

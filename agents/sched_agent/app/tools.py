@@ -30,20 +30,19 @@ def get_team_members() -> list[dict]:
         return []
 
 
-async def book_meeting(time_slot: str, restaurant: str, reason: str = "") -> str:
-    """Records a confirmed meeting and catering choice in the shared team bookings.
+async def book_meeting(time_slot: str, reason: str = "") -> str:
+    """Records a confirmed meeting in the shared team bookings.
 
     Args:
         time_slot: The day and time range of the confirmed meeting, e.g., "Monday 10:00-11:00".
-        restaurant: The name of the selected restaurant for catering, e.g., "Fiesta Tacos".
         reason: Optional brief reason/summary for selecting this choice.
     """
-    print(f"[Scheduling Agent] Finalizing booking: {time_slot} with catering from {restaurant}...")
+    print(f"[Scheduling Agent] Finalizing booking: {time_slot}...")
     try:
-        booking = await bookings.add_booking(time_slot, restaurant, reason)
+        booking = await bookings.add_booking(time_slot, reason)
         return (
-            f"Successfully booked! Meeting scheduled for {time_slot} with catering "
-            f"from {restaurant}. Booking ID: {booking['booking_id']}."
+            f"Successfully booked! Meeting scheduled for {time_slot}. "
+            f"Booking ID: {booking['booking_id']}."
         )
     except Exception as e:
         return f"Failed to book meeting: {str(e)}"
@@ -61,8 +60,9 @@ async def get_bookings() -> str:
         if not existing:
             return "No meetings are currently booked."
         lines = [
-            f"- {b['time_slot']} - catering from {b['catering_restaurant']}"
-            f" (booking {b['booking_id']})"
+            f"- {b['time_slot']}"
+            + (f" ({b['reason']})" if b.get("reason") else "")
+            + f" (booking {b['booking_id']})"
             for b in existing
         ]
         return "Existing team bookings:\n" + "\n".join(lines)

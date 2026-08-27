@@ -84,7 +84,7 @@ def test_team_scope_is_constant_and_user_independent() -> None:
 
 
 def test_write_uses_create_with_team_scope(fake: _FakeMemories) -> None:
-    asyncio.run(bookings.add_booking("Friday 12:00-13:00", "Fiesta Tacos", "Team lunch"))
+    asyncio.run(bookings.add_booking("Friday 12:00-13:00", "Team lunch"))
 
     assert len(fake.create_calls) == 1
     call = fake.create_calls[0]
@@ -97,7 +97,7 @@ def test_write_uses_create_with_team_scope(fake: _FakeMemories) -> None:
 
 def test_read_is_scope_keyed_with_an_explicit_page_size(fake: _FakeMemories) -> None:
     """Unset, page_size silently yields only 3 memories."""
-    asyncio.run(bookings.add_booking("Friday 12:00-13:00", "Fiesta Tacos"))
+    asyncio.run(bookings.add_booking("Friday 12:00-13:00"))
     asyncio.run(bookings.list_bookings())
 
     call = fake.retrieve_calls[0]
@@ -108,27 +108,26 @@ def test_read_is_scope_keyed_with_an_explicit_page_size(fake: _FakeMemories) -> 
 
 
 def test_round_trip_preserves_fields(fake: _FakeMemories) -> None:
-    asyncio.run(bookings.add_booking("Friday 12:00-13:00", "Fiesta Tacos", "Team lunch"))
+    asyncio.run(bookings.add_booking("Friday 12:00-13:00", "Team lunch"))
     listed = asyncio.run(bookings.list_bookings())
 
     assert len(listed) == 1
     assert listed[0]["time_slot"] == "Friday 12:00-13:00"
-    assert listed[0]["catering_restaurant"] == "Fiesta Tacos"
     assert listed[0]["reason"] == "Team lunch"
     assert listed[0]["booking_id"].startswith("bk_")
 
 
 def test_reads_every_page_not_just_the_first(fake: _FakeMemories) -> None:
     for i in range(7):
-        asyncio.run(bookings.add_booking(f"Slot {i}", "Fiesta Tacos"))
+        asyncio.run(bookings.add_booking(f"Slot {i}"))
 
     assert len(asyncio.run(bookings.list_bookings())) == 7
 
 
 def test_foreign_memories_in_the_scope_are_ignored(fake: _FakeMemories) -> None:
-    fake.facts.append("Alice is allergic to dairy")
+    fake.facts.append("Sprint retrospective notes from Friday")
     fake.facts.append("booking:{not valid json")
-    asyncio.run(bookings.add_booking("Friday 12:00-13:00", "Fiesta Tacos"))
+    asyncio.run(bookings.add_booking("Friday 12:00-13:00"))
 
     listed = asyncio.run(bookings.list_bookings())
     assert len(listed) == 1
@@ -141,15 +140,15 @@ def test_falls_back_in_process_when_no_engine_configured(
     monkeypatch.delenv("GOOGLE_CLOUD_AGENT_ENGINE_ID", raising=False)
     monkeypatch.setattr(bookings, "_local_bookings", [])
 
-    asyncio.run(bookings.add_booking("Friday 12:00-13:00", "Fiesta Tacos"))
+    asyncio.run(bookings.add_booking("Friday 12:00-13:00"))
     assert len(asyncio.run(bookings.list_bookings())) == 1
 
 
 def test_cancelling_deletes_the_matching_memory(fake: _FakeMemories) -> None:
     """Deletion addresses the memory's resource name, which only the retrieved
     memory carries -- a booking parsed from its fact cannot be traced back."""
-    keep = asyncio.run(bookings.add_booking("Monday 12:00-13:00", "Fiesta Tacos"))
-    drop = asyncio.run(bookings.add_booking("Friday 12:00-13:00", "Grain Bowls"))
+    keep = asyncio.run(bookings.add_booking("Monday 12:00-13:00"))
+    drop = asyncio.run(bookings.add_booking("Friday 12:00-13:00"))
 
     assert asyncio.run(bookings.delete_booking(drop["booking_id"])) is True
 
@@ -161,7 +160,7 @@ def test_cancelling_deletes_the_matching_memory(fake: _FakeMemories) -> None:
 def test_cancelling_an_unknown_id_reports_it_and_deletes_nothing(
     fake: _FakeMemories,
 ) -> None:
-    asyncio.run(bookings.add_booking("Monday 12:00-13:00", "Fiesta Tacos"))
+    asyncio.run(bookings.add_booking("Monday 12:00-13:00"))
 
     assert asyncio.run(bookings.delete_booking("bk_does_not_exist")) is False
 
@@ -171,7 +170,7 @@ def test_cancelling_an_unknown_id_reports_it_and_deletes_nothing(
 
 def test_cancelling_frees_the_slot_for_the_whole_team(fake: _FakeMemories) -> None:
     """The scope is constant, so a cancellation is visible to every caller."""
-    booking = asyncio.run(bookings.add_booking("Friday 12:00-13:00", "Fiesta Tacos"))
+    booking = asyncio.run(bookings.add_booking("Friday 12:00-13:00"))
     asyncio.run(bookings.delete_booking(booking["booking_id"]))
 
     assert asyncio.run(bookings.list_bookings()) == []
@@ -180,13 +179,13 @@ def test_cancelling_frees_the_slot_for_the_whole_team(fake: _FakeMemories) -> No
 
 def test_foreign_memories_are_never_deleted(fake: _FakeMemories) -> None:
     """A scope may hold memories this module did not write."""
-    fake.facts.append("Alice is allergic to dairy")
-    booking = asyncio.run(bookings.add_booking("Friday 12:00-13:00", "Fiesta Tacos"))
+    fake.facts.append("Sprint retrospective notes from Friday")
+    booking = asyncio.run(bookings.add_booking("Friday 12:00-13:00"))
 
     asyncio.run(bookings.delete_booking(booking["booking_id"]))
 
     assert fake.delete_calls == ["memories/1"]
-    assert fake.facts == ["Alice is allergic to dairy"]
+    assert fake.facts == ["Sprint retrospective notes from Friday"]
 
 
 def test_cancelling_falls_back_in_process_when_no_engine_configured(
@@ -195,7 +194,7 @@ def test_cancelling_falls_back_in_process_when_no_engine_configured(
     monkeypatch.delenv("GOOGLE_CLOUD_AGENT_ENGINE_ID", raising=False)
     monkeypatch.setattr(bookings, "_local_bookings", [])
 
-    booking = asyncio.run(bookings.add_booking("Friday 12:00-13:00", "Fiesta Tacos"))
+    booking = asyncio.run(bookings.add_booking("Friday 12:00-13:00"))
 
     assert asyncio.run(bookings.delete_booking(booking["booking_id"])) is True
     assert asyncio.run(bookings.list_bookings()) == []
@@ -206,7 +205,7 @@ def test_ids_are_unique_within_a_second(fake: _FakeMemories) -> None:
     """Cancellation resolves a booking by id, so ids built from whole seconds
     would let one cancellation remove a different meeting."""
     ids = {
-        asyncio.run(bookings.add_booking(f"Slot {i}", "Fiesta Tacos"))["booking_id"]
+        asyncio.run(bookings.add_booking(f"Slot {i}"))["booking_id"]
         for i in range(20)
     }
 
@@ -217,7 +216,7 @@ def test_clearing_all_requires_the_count_to_match(fake: _FakeMemories) -> None:
     """The count is the confirmation: a caller that guessed, or listed before
     someone else booked, must not clear the team's calendar."""
     for i in range(3):
-        asyncio.run(bookings.add_booking(f"Slot {i}", "Fiesta Tacos"))
+        asyncio.run(bookings.add_booking(f"Slot {i}"))
 
     assert asyncio.run(bookings.delete_all_bookings(2)) == -1
 
@@ -229,7 +228,7 @@ def test_clearing_all_deletes_every_booking_when_the_count_matches(
     fake: _FakeMemories,
 ) -> None:
     for i in range(3):
-        asyncio.run(bookings.add_booking(f"Slot {i}", "Fiesta Tacos"))
+        asyncio.run(bookings.add_booking(f"Slot {i}"))
 
     assert asyncio.run(bookings.delete_all_bookings(3)) == 3
     assert asyncio.run(bookings.list_bookings()) == []
@@ -238,11 +237,11 @@ def test_clearing_all_deletes_every_booking_when_the_count_matches(
 def test_clearing_all_leaves_foreign_memories_alone(fake: _FakeMemories) -> None:
     """Only bookings are counted and only bookings are deleted; the scope may
     hold memories this module did not write."""
-    fake.facts.append("Alice is allergic to dairy")
-    asyncio.run(bookings.add_booking("Friday 12:00-13:00", "Fiesta Tacos"))
+    fake.facts.append("Sprint retrospective notes from Friday")
+    asyncio.run(bookings.add_booking("Friday 12:00-13:00"))
 
     assert asyncio.run(bookings.delete_all_bookings(1)) == 1
-    assert fake.facts == ["Alice is allergic to dairy"]
+    assert fake.facts == ["Sprint retrospective notes from Friday"]
 
 
 def test_clearing_an_empty_collection_is_not_a_mismatch(fake: _FakeMemories) -> None:
@@ -256,8 +255,8 @@ def test_clearing_all_falls_back_in_process_when_no_engine_configured(
     monkeypatch.delenv("GOOGLE_CLOUD_AGENT_ENGINE_ID", raising=False)
     monkeypatch.setattr(bookings, "_local_bookings", [])
 
-    asyncio.run(bookings.add_booking("Friday 12:00-13:00", "Fiesta Tacos"))
-    asyncio.run(bookings.add_booking("Monday 12:00-13:00", "Grain Bowls"))
+    asyncio.run(bookings.add_booking("Friday 12:00-13:00"))
+    asyncio.run(bookings.add_booking("Monday 12:00-13:00"))
 
     assert asyncio.run(bookings.delete_all_bookings(1)) == -1
     assert len(asyncio.run(bookings.list_bookings())) == 2

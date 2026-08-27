@@ -8,7 +8,7 @@ The centralized Orchestrator Agent (the cognitive frontend) for the Luncher plat
 
 The Orchestrator acts as the "cognitive frontend" or user gateway, delegating specialized sub-tasks to the backend agents:
 1. **`strat_agent`**: Queried via A2A to extract current corporate strategic goals (e.g., launching *OmniChef* or strategic business constraints).
-2. **`sched_agent`**: Queried via A2A to perform team schedule checks, manage preferences, and book catering.
+2. **`sched_agent`**: Queried via A2A to perform team schedule checks and manage meeting bookings.
 
 ---
 

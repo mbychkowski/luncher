@@ -28,7 +28,7 @@ for an identical result, and was removed. Building it here:
 
 The trade is that the surface shape is fixed: the model can no longer restructure
 the layout per response. Determinism applies to *structure*, not content -- the
-model can still pass a slot that isn't free or misread a dietary note, which is
+model can still pass a slot that isn't free or miscount free attendees, which is
 what the eval suite in ``tests/eval`` exists to measure.
 """
 
@@ -59,20 +59,18 @@ PAYLOAD_STATE_KEY = "temp:a2ui_payload"
 
 ROLE_DESCRIPTION = (
     "You are the central Luncher Synthesizer Agent. You receive context containing "
-    "retrieved team food preferences from memory, strategic corporate priorities, and "
-    "team schedule options.\n\n"
+    "strategic corporate priorities and team schedule options.\n\n"
     "Synthesize them into a single lunch proposal and call the `propose_lunch` tool to "
     "render it. Frame the lunch around the strategic objective it serves, include every "
-    "team member by name, carry across who cannot attend each slot exactly as the "
-    "scheduling agent reported it, and make sure the menu respects every dietary "
-    "preference and allergy you were given -- noting which restriction each dish "
-    "accommodates.\n\n"
+    "team member by name, and carry across who cannot attend each slot exactly as the "
+    "scheduling agent reported it.\n\n"
     "After calling the tool, reply with one short sentence summarising the proposal. "
     "Do not describe the UI and do not output JSON.\n\n"
     "BOOKING TURNS. When the turn carries a `book_lunch` action rather than a fresh "
     "request, the user has pressed the button on a proposal you already made. Do not "
     "call `propose_lunch` again. Reply with a confirmation of at most four bullets -- "
-    "time slot, catering, attendees, booking id -- and nothing else. No strategy "
+    "time slot, attendees, booking id, and the food reminder note: "
+    "'You might want to order some food for this meeting.' -- and nothing else. No strategy "
     "recap, no restatement of the objectives, no closing pleasantries. You are the "
     "only agent the user hears, so say each fact once."
 )
@@ -94,13 +92,11 @@ def build_lunch_surface(
     attendees: list[str],
     time_slots: list[dict],
     recommended_slot: str,
-    menu_items: list[dict],
 ) -> list[dict]:
     """Builds the three A2UI v0.8 messages for a lunch proposal.
 
     ``time_slots`` items carry ``label``, ``value`` and an optional ``absent``
-    naming who cannot attend that slot; ``menu_items`` carry ``name`` and
-    ``dietary_note``. Every interactive binding is a data-model path by
+    naming who cannot attend that slot. Every interactive binding is a data-model path by
     construction, so the payload cannot exhibit the literal-binding defect.
     """
     if not time_slots:
@@ -135,8 +131,7 @@ def build_lunch_surface(
                             "slot-picker",
                             "absence-heading",
                             "absence-list",
-                            "menu-heading",
-                            "menu-list",
+                            "food-note",
                             "book-button",
                         ]
                     },
@@ -191,33 +186,7 @@ def build_lunch_surface(
         },
         _text("absence-item-slot", path="/slot", usage_hint="h5"),
         _text("absence-item-who", path="/who", usage_hint="caption"),
-        _text("menu-heading", literal="Catering Menu", usage_hint="h3"),
-        {
-            "id": "menu-list",
-            "component": {
-                "List": {
-                    "direction": "vertical",
-                    "children": {
-                        "template": {
-                            "componentId": "menu-item-template",
-                            "dataBinding": "/menuItems",
-                        }
-                    },
-                    "alignment": "start",
-                }
-            },
-        },
-        {
-            "id": "menu-item-template",
-            "component": {
-                "Column": {
-                    "children": {"explicitList": ["menu-item-name", "menu-item-note"]},
-                    "alignment": "start",
-                }
-            },
-        },
-        _text("menu-item-name", path="/name", usage_hint="h5"),
-        _text("menu-item-note", path="/dietaryNote", usage_hint="caption"),
+        _text("food-note", literal="You might want to order some food for this meeting.", usage_hint="body"),
         _text("book-button-text", literal="Book this lunch"),
         {
             "id": "book-button",
@@ -233,7 +202,6 @@ def build_lunch_surface(
                         "context": [
                             {"key": "selectedSlots", "value": {"path": "/selectedSlots"}},
                             {"key": "title", "value": {"path": "/title"}},
-                            {"key": "menuItems", "value": {"path": "/menuItems"}},
                         ],
                     },
                 }
@@ -273,22 +241,6 @@ def build_lunch_surface(
                                 ],
                             }
                             for index, slot in enumerate(time_slots, start=1)
-                        ],
-                    },
-                    {
-                        "key": "menuItems",
-                        "valueMap": [
-                            {
-                                "key": f"item{index}",
-                                "valueMap": [
-                                    {"key": "name", "valueString": item["name"]},
-                                    {
-                                        "key": "dietaryNote",
-                                        "valueString": item.get("dietary_note", ""),
-                                    },
-                                ],
-                            }
-                            for index, item in enumerate(menu_items, start=1)
                         ],
                     },
                 ],
@@ -372,15 +324,13 @@ def propose_lunch(
     slot_values: list[str],
     slot_absentees: list[str],
     recommended_slot: str,
-    menu_names: list[str],
-    menu_notes: list[str],
     tool_context: ToolContext,
 ) -> str:
     """Renders the team lunch proposal to the user as an interactive card.
 
     Every argument is a flat list of strings. Lists that pair up (slot_labels with
-    slot_values and slot_absentees, menu_names with menu_notes) must be the same
-    length and in the same order -- entry i of one describes entry i of the other.
+    slot_values and slot_absentees) must be the same length and in the same order --
+    entry i of one describes entry i of the other.
 
     Args:
         title: Short name for the lunch, referencing the strategic objective it serves.
@@ -401,9 +351,6 @@ def propose_lunch(
             whole team can make. Every name must be one the scheduling agent
             listed.
         recommended_slot: The slot_values entry you recommend; must be one of them.
-        menu_names: Dish name per catering option.
-        menu_notes: The dietary restriction each dish accommodates (e.g. "Gluten-free"),
-            same order and length as menu_names.
     """
     try:
         if len(slot_labels) != len(slot_values):
@@ -416,11 +363,6 @@ def propose_lunch(
                 f"slot_absentees has {len(slot_absentees)} entries but slot_labels has "
                 f"{len(slot_labels)}; give one entry per slot, empty where everyone "
                 f"can attend"
-            )
-        if len(menu_names) != len(menu_notes):
-            raise ValueError(
-                f"menu_names has {len(menu_names)} entries but menu_notes has "
-                f"{len(menu_notes)}; they must correspond one to one"
             )
         roster_text = _scheduling_agent_text(tool_context)
         roster = _roster_from_text(roster_text)
@@ -469,10 +411,6 @@ def propose_lunch(
                 for label, value, absent in zip(slot_labels, slot_values, slot_absentees)
             ],
             recommended_slot=recommended_slot,
-            menu_items=[
-                {"name": name, "dietary_note": note}
-                for name, note in zip(menu_names, menu_notes)
-            ],
         )
     except (ValueError, KeyError, TypeError) as error:
         # Returned to the model so it can correct the arguments and retry.

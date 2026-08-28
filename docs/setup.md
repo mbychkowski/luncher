@@ -79,15 +79,14 @@ Run the following shell scripts in order from the repository root.
 ./scripts/03-setup-iam.sh
 ```
 
-* **Main Takeaway**: Grants necessary project-level IAM roles to Google Cloud runtime service accounts so agents, container runtimes, and build pipelines can execute seamlessly.
+* **Main Takeaway**: Grants necessary project-level IAM roles to Google Cloud runtime service accounts and the local developer user account so agents, container runtimes, build pipelines, and local development tools can execute seamlessly.
 * **Service Accounts & Granted IAM Roles**:
 
   ##### 1. Gemini Enterprise Agent Platform (GEAP) Reasoning Engine Service Agent
   `service-${PROJECT_NUMBER}@gcp-sa-aiplatform-re.iam.gserviceaccount.com`
-  - **`roles/aiplatform.user`** (*Agent Platform User*): Allows Reasoning Engine to execute models and manage sessions.
-  - **`roles/agentregistry.viewer`** (*Agent Registry API Viewer*): Allows agent card discovery across registered A2A sub-agents.
-  - **`roles/run.invoker`** (*Cloud Run Invoker*): Allows Reasoning Engine to invoke sub-agents deployed on Cloud Run.
-  - **`roles/aiplatform.reasoningEngineServiceAgent`** (*Gemini Enterprise Agent Platform Reasoning Engine Service Agent*): Standard Reasoning Engine operational role.
+  - **`roles/aiplatform.user`** (*Agent Platform User*): Allows Reasoning Engine to execute models, manage sessions, and interact with Memory Bank.
+  - **`roles/aiplatform.reasoningEngineServiceAgent`** (*Reasoning Engine Service Agent*): Standard Reasoning Engine operational role.
+  - **`roles/bigquery.admin`** (*BigQuery Admin*): Query and interact with the `catering` BigQuery dataset.
 
   ##### 2. Compute Service Account (Cloud Run Runtime)
   `${PROJECT_NUMBER}-compute@developer.gserviceaccount.com`
@@ -95,10 +94,17 @@ Run the following shell scripts in order from the repository root.
   - **`roles/artifactregistry.admin`** (*Artifact Registry Admin*): Pull container images for Cloud Run.
   - **`roles/logging.logWriter`** (*Logs Writer*): Write agent trace logs and telemetry to Cloud Logging.
   - **`roles/run.invoker`** (*Cloud Run Invoker*): Allows Cloud Run agent instances to invoke peer A2A Cloud Run services.
+  - **`roles/bigquery.admin`** (*BigQuery Admin*): Query and manage BigQuery datasets from Cloud Run.
+  - **`roles/aiplatform.user`** (*Agent Platform User*): Manage sessions on the orchestrator's Agent Engine.
 
   ##### 3. Cloud Build Service Account
   `${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com`
   - **`roles/artifactregistry.admin`** (*Artifact Registry Admin*): Push built container images to Artifact Registry.
+
+  ##### 4. Local ADC Active Developer Account
+  `${USER_ACCOUNT}`
+  - **`roles/bigquery.admin`** (*BigQuery Admin*): Query the `catering` dataset locally using Application Default Credentials (ADC).
+
 
 ---
 

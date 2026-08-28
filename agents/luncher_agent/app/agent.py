@@ -36,9 +36,9 @@ from google.genai.types import (
     ThinkingLevel,
 )
 
-from app.app_utils.genai_transport import GenaiApiTransport
-from app.a2ui_builder import ROLE_DESCRIPTION as SYNTHESIZER_INSTRUCTION
-from app.a2ui_builder import (
+from .app_utils.genai_transport import GenaiApiTransport
+from .a2ui_builder import ROLE_DESCRIPTION as SYNTHESIZER_INSTRUCTION
+from .a2ui_builder import (
     A2uiHistoryPlugin,
     a2ui_emit_callback,
     propose_lunch_tool,

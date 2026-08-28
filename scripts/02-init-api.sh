@@ -89,31 +89,3 @@ if [ -f "${MENU_DATA_FILE}" ]; then
 else
   echo "Warning: Catering menu data file '${MENU_DATA_FILE}' not found. Skipping table population."
 fi
-# ==============================================================================
-# Agent Engine holding the orchestrator's Sessions
-# ==============================================================================
-# The orchestrator runs on Cloud Run, which injects no engine id, so it needs an
-# engine of its own. An engine with no packaged code is a valid target for Sessions.
-ENGINE_DISPLAY_NAME="luncher-agent"
-ENGINE_API="https://${GOOGLE_CLOUD_LOCATION}-aiplatform.googleapis.com/v1/projects/${GOOGLE_CLOUD_PROJECT_ID}/locations/${GOOGLE_CLOUD_LOCATION}/reasoningEngines"
-ENGINE_TOKEN=$(gcloud auth print-access-token)
-
-echo "Initializing Agent Engine '${ENGINE_DISPLAY_NAME}' in ${GOOGLE_CLOUD_LOCATION}..."
-EXISTING_ENGINE=$(curl -s -H "Authorization: Bearer ${ENGINE_TOKEN}" "${ENGINE_API}" \
-  | jq -r --arg n "${ENGINE_DISPLAY_NAME}" \
-      '.reasoningEngines[]? | select(.displayName==$n) | .name' | head -1)
-
-if [ -n "${EXISTING_ENGINE}" ]; then
-  echo "Agent Engine '${ENGINE_DISPLAY_NAME}' already exists: ${EXISTING_ENGINE##*/}"
-else
-  ENGINE_ERR=$(curl -s -X POST \
-    -H "Authorization: Bearer ${ENGINE_TOKEN}" \
-    -H "Content-Type: application/json" \
-    -d "{\"displayName\":\"${ENGINE_DISPLAY_NAME}\"}" \
-    "${ENGINE_API}" | jq -r '.error.message // empty')
-  if [ -n "${ENGINE_ERR}" ]; then
-    echo "Error: could not create Agent Engine '${ENGINE_DISPLAY_NAME}': ${ENGINE_ERR}"
-    exit 1
-  fi
-  echo "Agent Engine '${ENGINE_DISPLAY_NAME}' created."
-fi

@@ -126,7 +126,7 @@ def _executor_config():
     defaults) when the agent does not render A2UI.
     """
     try:
-        from app.a2ui import a2ui_gen_ai_part_converter
+        from ..a2ui import a2ui_gen_ai_part_converter
     except ImportError as e:
         logger.warning("A2UI part conversion disabled: %s", e)
         return None

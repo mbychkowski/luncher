@@ -1,10 +1,7 @@
 import os
 import json
 
-try:
-    from app import bookings
-except ModuleNotFoundError:
-    from . import bookings
+from . import bookings
 
 # Resolve DATA_DIR cleanly for local, container, or package execution
 _CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))

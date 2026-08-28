@@ -24,10 +24,10 @@ uv --directory agents/sched_agent run main.py
 With the sub-agents running, open a **3rd terminal** and run the Luncher Orchestrator
 from root, either through the ADK web UI or from the CLI.
 
-#### Option A: ADK web UI (port 8080)
+#### Run ADK web UI (port 8080)
 
 ```bash
-uv --directory agents/luncher_agent run main.py
+uv --directory agents/luncher_agent run agents-cli playground
 ```
 1. Open the dev UI in your browser:
 
@@ -45,7 +45,7 @@ uv --directory agents/luncher_agent run main.py
 
 The orchestrator replies with an A2UI proposal card ending in a booking button:
 
-<img src="docs/images/book-this-lunch-button.png" alt="Book this lunch" width="141">
+![Book this lunch](images/book-this-lunch-button.png)
 
 > **Note:** that button does nothing in the ADK dev UI, which renders A2UI but never sends actions back to the agent. To book locally, confirm in chat instead — *"that works, book it"*. The button works in Gemini Enterprise, whose A2UI client dispatches the action.
 
@@ -56,5 +56,10 @@ The orchestrator replies with an A2UI proposal card ending in a booking button:
 One prompt, no browser — the orchestrator is not left running.
 
 ```bash
-uv run agents-cli run agents/luncher_agent "Plan a team lunch meeting for next week"
+uv --directory agents/luncher_agent run agents-cli run "Plan a team lunch meeting for next week"
 ```
+
+---
+
+| [⬅️ Previous: 1. Setup](setup.md) | [📚 Getting Started](../README.md#getting-started) | [Next: 3. Deploying to Cloud ➡️](deploy.md) |
+| :--- | :---: | ---: |

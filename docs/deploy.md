@@ -123,3 +123,8 @@ LUNCHER_URL="https://luncher-agent-$(gcloud projects describe "$GOOGLE_CLOUD_PRO
 
 The orchestrator's own agent card is served at `/a2a/luncher_agent/.well-known/agent-card.json`
 (the path carries the ADK `App` name), while both sub-agents serve theirs at `/a2a/app/...`.
+
+---
+
+| [⬅️ Previous: 2. Local Testing](local.md) | [📚 Getting Started](../README.md#getting-started) | [Next: 4. Registering to Gemini Enterprise ➡️](ge.md) |
+| :--- | :---: | ---: |

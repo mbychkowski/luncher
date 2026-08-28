@@ -25,22 +25,13 @@ from google.genai import types
 load_dotenv(override=True)
 os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "True"
 
-try:
-    from app.tools import (
-        get_team_members,
-        book_meeting,
-        get_bookings,
-        cancel_booking,
-        cancel_all_bookings,
-    )
-except ModuleNotFoundError:
-    from .tools import (
-        get_team_members,
-        book_meeting,
-        get_bookings,
-        cancel_booking,
-        cancel_all_bookings,
-    )
+from .tools import (
+    get_team_members,
+    book_meeting,
+    get_bookings,
+    cancel_booking,
+    cancel_all_bookings,
+)
 
 sched_retry_policy = types.HttpRetryOptions(
     attempts=5,

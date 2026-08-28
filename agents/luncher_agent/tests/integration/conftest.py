@@ -34,8 +34,8 @@ from requests.exceptions import RequestException
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Sessions and memories would otherwise be written to the deployed agent's
-# Memory Bank. Popped before anything imports app.app_utils.services, whose
+# Sessions would otherwise be written to the deployed agent's
+# Agent Engine. Popped before anything imports app.app_utils.services, whose
 # builders are cached on first call. scripts/05-run-evals.sh does the same.
 os.environ.pop("GOOGLE_CLOUD_AGENT_ENGINE_ID", None)
 

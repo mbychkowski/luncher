@@ -93,7 +93,7 @@ echo "strat: ${STRATEGY_AGENT_URL:-UNRESOLVED}"; echo "sched: ${SCHEDULING_AGENT
 ```
 
 **5. Resolve the orchestrator's own engine**, created by `02-init-api.sh` to hold
-its sessions and Memory Bank. Cloud Run injects nothing, so it is passed
+its sessions. Cloud Run injects nothing, so it is passed
 explicitly.
 
 ```bash

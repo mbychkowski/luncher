@@ -2,7 +2,7 @@
 
 `agents-cli eval` grades response quality but reports no token counts or wall
 clock, and `agent_turn_count` is not a usable proxy. This drives the synthesizer
-in isolation -- no orchestrator, no sub-agent hops, no memory service -- so the
+in isolation -- no orchestrator, no sub-agent hops -- so the
 numbers reflect the synthesizer alone.
 
 Repeats matter: the value of building the surface deterministically shows up as a

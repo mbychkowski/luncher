@@ -44,7 +44,7 @@ Run the following shell scripts in order from the repository root.
   | `LOG_LEVEL` | Verbosity of the orchestrator's own logs. `INFO` adds a line per A2A event naming the agent that authored it and whether it was withheld | `"WARNING"` |
   | `STRATEGY_AGENT_URL` | Agent card URL of `strat_agent`, used by the orchestrator over A2A | resolved at deploy time |
   | `SCHEDULING_AGENT_URL` | Agent card URL of `sched_agent`, used by the orchestrator over A2A | resolved at deploy time |
-  | `GOOGLE_CLOUD_AGENT_ENGINE_ID` | Engine holding **this** agent's sessions and Memory Bank. Injected on Agent Runtime; must be set explicitly on Cloud Run | resolved at deploy time |
+  | `GOOGLE_CLOUD_AGENT_ENGINE_ID` | Engine holding **this** agent's sessions (and Memory Bank for `sched_agent`). Injected on Agent Runtime; must be set explicitly on Cloud Run | resolved at deploy time |
 
 ---
 
@@ -55,7 +55,7 @@ Run the following shell scripts in order from the repository root.
 
 * **Main Takeaway**: Enables the required Google Cloud APIs, creates the BigQuery
   `catering` dataset and loads the menu data, and creates the Agent Engine that
-  holds the orchestrator's sessions and Memory Bank.
+  holds the orchestrator's sessions.
 * **Enabled APIs Summary**:
   | API Service | Purpose |
   | :--- | :--- |

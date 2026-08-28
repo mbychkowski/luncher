@@ -396,7 +396,7 @@ app = App(
     name="luncher_agent",
     root_agent=root_agent,
     # App-wide, not synthesizer-only: every agent in the app is handed the same
-    # conversation history, so memory_agent would otherwise carry the surface too.
+    # conversation history, so sub-agents would otherwise carry the surface too.
     plugins=[A2uiHistoryPlugin()],
 )
 

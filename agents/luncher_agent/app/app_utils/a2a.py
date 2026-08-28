@@ -156,9 +156,8 @@ def _only_synthesizer_speaks(convert):
     """Wraps the ADK-to-A2A event converter, dropping sub-agent commentary.
 
     Each sub-agent's own answer is an event of its own, so a client receives the
-    memory line, the strategy analysis, the scheduling reply and the synthesis
-    concatenated -- one turn narrating itself four times, describing the booking
-    twice, with no separator between authors.
+    strategy analysis, the scheduling reply and the synthesis concatenated --
+    one turn narrating itself multiple times with no separator between authors.
 
     Only text is withheld, and only on the way out. Sub-agent events still reach
     the session, which is where the synthesizer reads them.
@@ -254,7 +253,7 @@ async def attach_a2a_routes(
     """Register A2A routes (JSON-RPC + agent-card endpoints) under ``rpc_path``.
 
     Builds a dynamic agent card from ``agent`` and mounts the routes on ``app``.
-    The ``runner`` should share the session/artifact/memory services with the
+    The ``runner`` should share the session/artifact services with the
     standard ADK path. ``capabilities``, ``agent_version``, and ``app_url``
     override their defaults (streaming + ADK extension, ``AGENT_VERSION``,
     ``APP_URL``). Call once per app — typically in a FastAPI ``lifespan``, since

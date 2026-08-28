@@ -90,10 +90,10 @@ else
   echo "Warning: Catering menu data file '${MENU_DATA_FILE}' not found. Skipping table population."
 fi
 # ==============================================================================
-# Agent Engine holding the orchestrator's Sessions and Memory Bank
+# Agent Engine holding the orchestrator's Sessions
 # ==============================================================================
 # The orchestrator runs on Cloud Run, which injects no engine id, so it needs an
-# engine of its own. An engine with no packaged code is a valid target for both.
+# engine of its own. An engine with no packaged code is a valid target for Sessions.
 ENGINE_DISPLAY_NAME="luncher-agent"
 ENGINE_API="https://${GOOGLE_CLOUD_LOCATION}-aiplatform.googleapis.com/v1/projects/${GOOGLE_CLOUD_PROJECT_ID}/locations/${GOOGLE_CLOUD_LOCATION}/reasoningEngines"
 ENGINE_TOKEN=$(gcloud auth print-access-token)

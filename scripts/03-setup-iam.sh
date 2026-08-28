@@ -82,7 +82,7 @@ COMPUTE_ROLES=(
     "logging.logWriter"
     "run.invoker"
     "bigquery.admin"                         # BigQuery Admin access
-    "aiplatform.user"                        # sessions and Memory Bank on the orchestrator's engine
+    "aiplatform.user"                        # sessions on the orchestrator's engine
 )
 
 for role in "${COMPUTE_ROLES[@]}"; do

@@ -141,8 +141,8 @@ the agent, which delegates to `sched_agent` to write the booking.
   which is the quickest way to isolate a failure to a single agent. Traces,
   Sessions, Identity and Logs cover the same deployment.
   - `luncher-agent` appears in that list but is **not** a deployment: it is the
-    engine `02-init-api.sh` created to hold the orchestrator's sessions and
-    Memory Bank. It has no code and nothing to invoke.
+    engine `02-init-api.sh` created to hold the orchestrator's sessions.
+    It has no code and nothing to invoke.
   - The **Dashboard** tab needs `apphub.googleapis.com`, enabled by
     `02-init-api.sh`. On a project set up before that, it reports `API is not
     enabled`, and only that tab is affected.

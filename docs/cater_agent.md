@@ -95,6 +95,7 @@ Initiate a `/grill-me` session, then enter the following prompt and answer any q
 
 ```
 Add a memory feature for dietary preferences. Requirements:
+- when luncher_agent receives a prompt that appears to be a dietary preference specification, stop the lunch scheduling process. Instead, focus only on saving the dietary preference.
 - cater_agent has a tool for storing user dietary preferences as memories
 - when deployed to Agent Runtime, memories are stored using GEAP memory bank
 - when running locally, memories are stored in local memory

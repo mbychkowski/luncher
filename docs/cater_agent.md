@@ -127,3 +127,8 @@ When all deployments have completed, visit the deployed `luncher_agent` UI on Cl
 
 ## Step 6 (optional). Learn from experience
 Run `/learn` and follow the prompts to help Antigravity improve based on learnings from this session
+
+---
+
+| [⬅️ Previous: 4. Registering to Gemini Enterprise](ge.md) | [📚 Getting Started](../README.md#getting-started) | [Next: 6. Cleanup ➡️](cleanup.md) |
+| :--- | :---: | ---: |

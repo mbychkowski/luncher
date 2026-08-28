@@ -1,6 +1,6 @@
 name: "luncher-agent"
 acli_version: "1.1.0"
-agent_directory: "."
+agent_directory: "app"
 region: "us-central1"
 base_template: "adk"
 language: "python"

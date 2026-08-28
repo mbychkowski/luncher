@@ -27,3 +27,8 @@ for NAME in strat-agent sched-agent luncher-agent; do
     "https://${GOOGLE_CLOUD_LOCATION}-aiplatform.googleapis.com/v1/${ENGINE}?force=true"
 done
 ```
+
+---
+
+| [⬅️ Previous: 5. Catering Agent](cater_agent.md) | [📚 Getting Started](../README.md#getting-started) | [🏠 Return to README ➡️](../README.md) |
+| :--- | :---: | ---: |

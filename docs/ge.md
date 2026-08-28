@@ -157,3 +157,8 @@ the agent, which delegates to `sched_agent` to write the booking.
   then `http://localhost:8080`.
 - **Across the project:** **Console > Logging > Log Explorer** and **Cloud
   Trace** for execution logs and span attributes from every agent turn.
+
+---
+
+| [⬅️ Previous: 3. Deploying to Cloud](deploy.md) | [📚 Getting Started](../README.md#getting-started) | [Next: 5. Catering Agent ➡️](cater_agent.md) |
+| :--- | :---: | ---: |

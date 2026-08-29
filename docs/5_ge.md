@@ -54,7 +54,7 @@ are granted a role on it, it will not answer for you in the Gemini Enterprise ap
 **Apps > your app > Agents > Luncher Orchestrator > User permissions > Add user**,
 then your own address with the **Agent User** role:
 
-<img src="docs/images/gemini-enterprise-agent-user.png" alt="Add user permissions to the agent" width="497">
+<img src="images/gemini-enterprise-agent-user.png" alt="Add user permissions to the agent" width="497">
 
 The **All users** member type covers everyone in the organization, which is the
 option to use when running this as a workshop for a room.

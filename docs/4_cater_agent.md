@@ -113,7 +113,7 @@ Add a memory feature for dietary preferences. Requirements:
 
 ### 2. Validate local agent
 
-When the implementation is complete, visit http://localhost:8080/dev-ui/?app=luncher_agent and enter a preference prompt, like `my team doesn't like fish`. Verify that the application continues to function, and that catering options filter according to preferences.
+When the implementation is complete, visit http://localhost:8080/dev-ui/?app=app and enter a preference prompt, like `my team doesn't like fish`. Verify that the application continues to function, and that catering options filter according to preferences.
 
 > Note: when running locally, memories will be preserved within a session, but not across multiple sessions.
 

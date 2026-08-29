@@ -8,8 +8,8 @@ The system consists of 4 specialized agents cooperating over the **Agent-to-Agen
 
 | Agent | Directory / Name | Role & Description | Deployment Target | Connecting Tools / Subagents |
 | :--- | :--- | :--- | :--- | :--- |
-| 👑 **Luncher Orchestrator** | `luncher_agent` | **Primary Workflow Coordinator**: Orchestrates end-to-end lunch planning across sub-agents in a 2-stage pipeline (parallel gathering then synthesis). | **Agent Runtime** (`agents-cli deploy`) | • **Subagents**: `strategy_agent`, `scheduling_agent`, `cater_agent` (via `parallel_info_gatherer`)<br>• **Internal Agent**: `lunch_synthesizer`<br>• **Tools/Plugins**: `propose_lunch_tool`, `a2ui_emit_callback`, `A2uiHistoryPlugin` |
-| 🎯 **Strategy Agent** | `strat_agent` | **Corporate Strategy Analyst**: Analyzes company strategy documents and product launch roadmaps (OmniChef, VisionSphere) to provide contextual justifications. | **Agent Runtime** (`agents-cli deploy`) | • **Tools**: `inspect_strategy_documents` (reads PDFs from GCS bucket `gs://${STRATEGY_DOCS_BUCKET}` or local directory)<br>• **Subagent of**: `luncher_agent` |
+| 👑 **Luncher Orchestrator** | `luncher_agent` | **Primary Workflow Coordinator**: Orchestrates end-to-end lunch planning across sub-agents in a 2-stage pipeline (parallel gathering then synthesis). | **Agent Runtime** (`agents-cli deploy` with `--agent-identity`) | • **Subagents**: `strategy_agent`, `scheduling_agent`, `cater_agent` (via `parallel_info_gatherer`)<br>• **Internal Agent**: `lunch_synthesizer`<br>• **Tools/Plugins**: `propose_lunch_tool`, `a2ui_emit_callback`, `A2uiHistoryPlugin` |
+| 🎯 **Strategy Agent** | `strat_agent` | **Corporate Strategy Analyst**: Analyzes company strategy documents and product launch roadmaps (OmniChef, VisionSphere) to provide contextual justifications. | **Agent Runtime** (`agents-cli deploy` with `--agent-identity`) | • **Tools**: `inspect_strategy_documents` (reads PDFs from GCS bucket `gs://${STRATEGY_DOCS_BUCKET}` or local directory)<br>• **Subagent of**: `luncher_agent` |
 | 📅 **Scheduling Agent** | `sched_agent` | **Meeting & Calendar Coordinator**: Evaluates team schedules, detects overlaps, proposes ranked time slots, and manages team bookings. | **Agent Runtime** (`agents-cli deploy` with `--agent-identity`) | • **Tools**: `get_team_members`, `book_meeting`, `get_bookings`, `cancel_booking`, `cancel_all_bookings`<br>• **Storage**: Reasoning Engine Memory Bank (team bookings)<br>• **Subagent of**: `luncher_agent` |
 | 🥪 **Catering Agent** *(Upcoming)* | `cater_agent` | **Catering & Dietary Coordinator**: Suggests balanced, themed lunch menus and records/filters team dietary preferences. *(To be built from scratch).* | **Agent Runtime** (`agents-cli deploy` with `--agent-identity`) | • **Tools**: `fetch_catering_data` (BigQuery `catering.menu_items` via MCP `execute_sql`), dietary preference memory tools<br>• **Storage**: Reasoning Engine Memory Bank (dietary preferences)<br>• **Subagent of**: `luncher_agent` |
 
@@ -22,7 +22,7 @@ The system consists of 4 specialized agents cooperating over the **Agent-to-Agen
 > Why agents deploy to Agent Runtime:
 >
 > - **Injected Memory Bank Engine:** `sched_agent` and `cater_agent` store team bookings and dietary preferences in Memory Bank (`reasoningEngines/<ENGINE_ID>`). Agent Runtime automatically injects `GOOGLE_CLOUD_AGENT_ENGINE_ID`, so the host *is* the memory host without needing separate engine infrastructure.
-> - **Agent Identity:** Runtime service calls authenticate seamlessly via Application Default Credentials (ADC) and Agent Identity.
+> - **Agent Identity (`--agent-identity`):** Deploys agents with Workload Identity Federation. Under Agent Identity, cross-agent A2A requests authenticate securely via `GenaiApiTransport` (through `vertexai.Client()._api_client.request()`) rather than unbound bearer tokens, while granting each agent runtime permissions to GCP resources (GCS, BigQuery, and Reasoning Engines) via the project's Principal Set.
 > - **Orchestrator Hosting:** `luncher_agent` deploys directly to Agent Runtime, serving both ADK reasoning engine routes and A2A endpoints seamlessly.
 
 ---
@@ -95,13 +95,30 @@ uv --directory agents/sched_agent run agents-cli deploy \
 
 ### Step 5: Deploy the orchestrating Luncher Agent to Agent Runtime
 
+Pass the deployed sub-agents' Reasoning Engine unique IDs so the orchestrator configures their Agent Runtime A2A endpoints.
+
+Each agent's deploy step writes its engine ID to `agents/<agent_name>/deployment_metadata.json` under `"remote_agent_runtime_id"` (the numeric ID at the end of `projects/.../reasoningEngines/<ENGINE_ID>`).
+
+Extract them automatically using `jq` and deploy:
+
 ```bash
+STRAT_ENGINE_ID=$(jq -r '.remote_agent_runtime_id | split("/") | last' agents/strat_agent/deployment_metadata.json 2>/dev/null || echo "")
+SCHED_ENGINE_ID=$(jq -r '.remote_agent_runtime_id | split("/") | last' agents/sched_agent/deployment_metadata.json 2>/dev/null || echo "")
+
 uv --directory agents/luncher_agent run agents-cli deploy \
   --project "$GOOGLE_CLOUD_PROJECT_ID" \
   --region "$GOOGLE_CLOUD_LOCATION" \
   --agent-identity \
-  --update-env-vars "$BASE_ENV"
+  --update-env-vars "$BASE_ENV${STRAT_ENGINE_ID:+,STRATEGY_AGENT_ENGINE_ID=$STRAT_ENGINE_ID}${SCHED_ENGINE_ID:+,SCHEDULING_AGENT_ENGINE_ID=$SCHED_ENGINE_ID}"
 ```
+
+> **NOTE**
+>
+> **Manual Alternative:** You can also copy the numeric ID directly from each agent's `deployment_metadata.json` (or the console / CLI output from Steps 3 & 4):
+> ```bash
+> STRAT_ENGINE_ID="9876543210987654321"
+> SCHED_ENGINE_ID="1234567890123456789"
+> ```
 
 ### Step 6: Deploy the Catering Agent to Agent Runtime
 

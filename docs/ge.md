@@ -18,44 +18,31 @@ and pass it as `GEMINI_ENTERPRISE_PROJECT_ID`; unset, the script uses
 
 ---
 
-### Registering with Gemini Enterprise (`04-register-gemini-enterprise.sh`)
+### Registering with Gemini Enterprise (`05-register-gemini-enterprise.sh`)
 
 Register the orchestrator as an **A2A** agent. This is not a preference: Gemini
 Enterprise learns that an agent can render A2UI from its **agent card**, and only an
 A2A registration has one. An ADK registration authenticates fine but renders every
 surface as raw JSON.
 
-**1. Resolve the orchestrator's service root.** Already set as `$LUNCHER_URL` if
-you are in the shell that deployed it; this reads it back in a new one.
+**1. Resolve the orchestrator's Agent Engine ID.** Read from `deployment_metadata.json` produced when deploying `luncher_agent` to Agent Runtime:
 
 ```bash
-LUNCHER_URL=$(gcloud run services describe luncher-agent \
-  --region "$GOOGLE_CLOUD_LOCATION" --project "$GOOGLE_CLOUD_PROJECT_ID" \
-  --format='value(status.url)')
+AGENT_ENGINE_ID=$(jq -r '.remote_agent_runtime_id | split("/") | last' agents/luncher_agent/deployment_metadata.json)
 
-echo "luncher: ${LUNCHER_URL:-UNRESOLVED}"
+echo "luncher engine ID: ${AGENT_ENGINE_ID:-UNRESOLVED}"
 ```
 
-**2. Register.** Both IDs come from Step 2. Drop `--apply` to print the payload
-without sending it.
+**2. Register.** Drop `--apply` to print the payload without sending it.
 
 ```bash
 GEMINI_ENTERPRISE_APP_ID="gemini-enterprise-..." \
 GEMINI_ENTERPRISE_PROJECT_ID="project-holding-the-ge-app" \
-APP_URL="$LUNCHER_URL" \
-  ./scripts/04-register-gemini-enterprise.sh --apply
+AGENT_ENGINE_ID="$AGENT_ENGINE_ID" \
+  ./scripts/05-register-gemini-enterprise.sh --apply
 ```
 
-> **Important:** an A2A registration makes GE call the agent card's `url`
-> **directly**, so the Discovery Engine service agent of the GE app's project —
-> `service-<GE_PROJECT_NUMBER>@gcp-sa-discoveryengine.iam.gserviceaccount.com` —
-> needs `roles/run.invoker` on the orchestrator's Cloud Run service. The script
-> grants it after registering and prints the command if that fails.
->
-> Without it every turn fails `401 UNAUTHENTICATED / CREDENTIALS_MISSING` —
-> *"Request is missing required authentication credential."* The body says
-> **missing**, not invalid: GE has no credential to send, so nothing is rejected
-> and **no grant on the agent's own identity can fix it**.
+> **Note:** when registering an Agent Runtime agent, `05-register-gemini-enterprise.sh` automatically constructs the `/api` passthrough URL for the A2A agent card and registers it with the Gemini Enterprise app. If targeting an explicit endpoint (like Cloud Run or local proxy), you can pass `APP_URL` directly instead of `AGENT_ENGINE_ID`.
 
 ---
 
@@ -92,14 +79,14 @@ export GEMINI_ENTERPRISE_PROJECT_ID="project-holding-the-ge-app"
 See what is currently registered, and whether it registered as A2A or ADK:
 
 ```bash
-./scripts/04-register-gemini-enterprise.sh --list
+./scripts/05-register-gemini-enterprise.sh --list
 ```
 
 Remove a stale entry — a registration pointing at a deleted backend, or an ADK
 one that renders surfaces as raw JSON. The display name comes from `--list`:
 
 ```bash
-./scripts/04-register-gemini-enterprise.sh \
+./scripts/05-register-gemini-enterprise.sh \
   --deregister "Luncher Agent (A2A)" --apply
 ```
 

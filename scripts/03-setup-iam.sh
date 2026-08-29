@@ -46,17 +46,35 @@ gcloud beta services identity create --service=aiplatform.googleapis.com \
 # A refused grant must be visible here; unreported it surfaces later as a 403.
 bind() {
   local member="$1" role="$2" err
-  if err=$(gcloud projects add-iam-policy-binding "$GOOGLE_CLOUD_PROJECT_ID" \
-      --member="$member" --role "roles/${role}" --condition=None 2>&1 >/dev/null); then
-    echo "  ok   roles/${role}"
-  elif echo "$err" | grep -q "does not exist"; then
-    # The Agent Runtime service agent appears only after the first engine deploy.
-    echo "  defer roles/${role} (service agent not created yet)"
-    DEFERRED=$((DEFERRED + 1))
-  else
-    echo "  FAIL roles/${role}: $(echo "$err" | tail -1)"
-    FAILED=$((FAILED + 1))
-  fi
+  local max_retries=5
+  local count=0
+  local delay=2
+
+  while true; do
+    if err=$(gcloud projects add-iam-policy-binding "$GOOGLE_CLOUD_PROJECT_ID" \
+        --member="$member" --role "roles/${role}" --condition=None 2>&1 >/dev/null); then
+      echo "  ok   roles/${role}"
+      return 0
+    elif echo "$err" | grep -q "does not exist"; then
+      # The Agent Runtime service agent appears only after the first engine deploy.
+      echo "  defer roles/${role} (service agent not created yet)"
+      DEFERRED=$((DEFERRED + 1))
+      return 0
+    elif echo "$err" | grep -q -i "conflict"; then
+      count=$((count + 1))
+      if [ "$count" -ge "$max_retries" ]; then
+        echo "  FAIL roles/${role}: $(echo "$err" | tail -1)"
+        FAILED=$((FAILED + 1))
+        return 1
+      fi
+      sleep "$delay"
+      delay=$((delay * 2))
+    else
+      echo "  FAIL roles/${role}: $(echo "$err" | tail -1)"
+      FAILED=$((FAILED + 1))
+      return 1
+    fi
+  done
 }
 
 # 1. Reasoning Engine Service Account
@@ -101,6 +119,20 @@ if [ -n "${USER_ACCOUNT}" ]; then
   bind "user:${USER_ACCOUNT}" "bigquery.admin"
 else
   echo "Warning: Could not detect active gcloud user account for local ADC IAM binding."
+fi
+
+# 5. Agent Identity Principal Set (for cross-agent A2A communication, GCS storage access, BigQuery on Agent Runtime)
+ORG_ID="${ORG_ID:-$(gcloud projects get-ancestors "$GOOGLE_CLOUD_PROJECT_ID" --format="json" 2>/dev/null | python3 -c "import json, sys; print(next((a['id'] for a in json.load(sys.stdin) if a.get('type') == 'organization'), ''))" 2>/dev/null || echo "")}"
+if [ -n "${ORG_ID}" ]; then
+  AGENT_PRINCIPAL_SET="principalSet://agents.global.org-${ORG_ID}.system.id.goog/attribute.platformContainer/aiplatform/projects/${PROJECT_NUMBER}"
+  echo "Binding roles to Agent Identity Principal Set: ${AGENT_PRINCIPAL_SET}..."
+  bind "${AGENT_PRINCIPAL_SET}" "aiplatform.user"
+  bind "${AGENT_PRINCIPAL_SET}" "serviceusage.serviceUsageConsumer"
+  bind "${AGENT_PRINCIPAL_SET}" "storage.objectViewer"
+  bind "${AGENT_PRINCIPAL_SET}" "bigquery.admin"
+else
+  echo "Notice: Could not automatically resolve Organization ID for ${GOOGLE_CLOUD_PROJECT_ID}."
+  echo "        If your project belongs to a GCP Organization, you can re-run with: ORG_ID=<org_id> ./scripts/03-setup-iam.sh"
 fi
 
 if [ "$FAILED" -gt 0 ]; then

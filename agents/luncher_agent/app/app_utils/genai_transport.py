@@ -18,9 +18,6 @@ Under Agent Identity the credential is bound, so a bearer header built from ADC
 is 401'd and no IAM grant helps -- the fix is the transport, not the credential.
 Exposing the genai client's ``_api_client.request()`` as a transport keeps card
 resolution, the JSON-RPC envelope and part conversion in ADK's ``RemoteA2aAgent``.
-
-Agent Runtime peers only; Cloud Run wants an audience-bound ID token -- see
-``GoogleAuth`` in ``app.agent``.
 """
 
 from __future__ import annotations

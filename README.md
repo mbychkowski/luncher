@@ -34,13 +34,13 @@ and Linux).
 
 Stage 1 gathers from two sub-agents concurrently: `strategy_agent` and `scheduling_agent`
 are remote A2A peers. Stage 2's `lunch_synthesizer` runs in the orchestrator's own process
-and renders the A2UI surface — which is why the orchestrator must be on Cloud Run (see Step 1).
+and renders the A2UI surface.
 
 ```mermaid
 graph TD
     User(["👤 User / Client"]) -->|1. Sends Prompt| LuncherProcess
 
-    subgraph LuncherProcess ["👑 Luncher Orchestrator (Cloud Run)"]
+    subgraph LuncherProcess ["👑 Luncher Orchestrator (Agent Runtime)"]
         LuncherSeq["luncher_agent (SequentialAgent)"]
         ParallelGatherer["parallel_info_gatherer (ParallelAgent)"]
         Synthesizer["lunch_synthesizer<br/>propose_lunch → A2UI v0.8"]
@@ -95,11 +95,11 @@ See: [Local testing](docs/local.md)
 ### 3. ☁️ Deploying to Cloud & Agent Platform Playground
 See: [Deploying to Cloud](docs/deploy.md)
 
-### 4. ✨ Registering to Gemini Enterprise
-See: [Registering to Gemini Enterprise](docs/ge.md)
-
-### 5. 🥪 Extending Luncher with a catering agent
+### 4. 🥪 Extending Luncher with a catering agent
 See: [Adding the catering agent](docs/cater_agent.md)
+
+### 5. ✨ Registering to Gemini Enterprise
+See: [Registering to Gemini Enterprise](docs/ge.md)
 
 ### 6. 🧹 Cleanup
 See: [Cleanup](docs/cleanup.md)

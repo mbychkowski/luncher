@@ -19,10 +19,10 @@ set -euo pipefail
 # makes its A2UI surfaces render in Gemini Enterprise rather than only in the ADK
 # dev UI.
 #
-#   ./scripts/04-register-gemini-enterprise.sh              # print the payload, POST nothing
-#   ./scripts/04-register-gemini-enterprise.sh --apply      # actually register
-#   ./scripts/04-register-gemini-enterprise.sh --list       # show what is registered
-#   ./scripts/04-register-gemini-enterprise.sh --deregister "NAME" --apply
+#   ./scripts/05-register-gemini-enterprise.sh              # print the payload, POST nothing
+#   ./scripts/05-register-gemini-enterprise.sh --apply      # actually register
+#   ./scripts/05-register-gemini-enterprise.sh --list       # show what is registered
+#   ./scripts/05-register-gemini-enterprise.sh --deregister "NAME" --apply
 #
 # Requires, beyond .env:
 #   GEMINI_ENTERPRISE_APP_ID    the GE app (engine) to register into

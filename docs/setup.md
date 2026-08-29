@@ -53,9 +53,7 @@ Run the following shell scripts in order from the repository root.
 ./scripts/02-init-api.sh
 ```
 
-* **Main Takeaway**: Enables the required Google Cloud APIs, creates the BigQuery
-  `catering` dataset and loads the menu data, and creates the Agent Engine that
-  holds the orchestrator's sessions.
+* **Main Takeaway**: Enables the required Google Cloud APIs and sets the default compute region for your GCP project.
 * **Enabled APIs Summary**:
   | API Service | Purpose |
   | :--- | :--- |
@@ -104,6 +102,18 @@ Run the following shell scripts in order from the repository root.
   ##### 4. Local ADC Active Developer Account
   `${USER_ACCOUNT}`
   - **`roles/bigquery.admin`** (*BigQuery Admin*): Query the `catering` dataset locally using Application Default Credentials (ADC).
+
+  ##### 5. Agent Identity Principal Set (Agent Runtime Identity & Workload Federation)
+  `principalSet://agents.global.org-${ORG_ID}.system.id.goog/attribute.platformContainer/aiplatform/projects/${PROJECT_NUMBER}`
+  - **`roles/aiplatform.user`** (*Agent Platform User*): Enables inter-agent A2A communication and session access between Agent Runtime instances.
+  - **`roles/serviceusage.serviceUsageConsumer`** (*Service Usage Consumer*): Allows agents deployed with `--agent-identity` to consume GCP APIs.
+  - **`roles/storage.objectViewer`** (*Storage Object Viewer*): Read access to strategy PDFs and other artifacts in Cloud Storage.
+  - **`roles/bigquery.admin`** (*BigQuery Admin*): Query and manage BigQuery datasets via MCP when running on Agent Runtime.
+
+  > **Note on Organization ID (`ORG_ID`):**
+  > - `03-setup-iam.sh` attempts to resolve `ORG_ID` automatically via `gcloud projects get-ancestors`.
+  > - **If resolution is restricted:** If your IAM roles prevent querying ancestor hierarchy, find your Org ID in the GCP Console top project picker dropdown and run: `ORG_ID=<your-org-id> ./scripts/03-setup-iam.sh`.
+  > - **Standalone projects:** If your GCP project does not belong to a GCP Organization (e.g. personal account), this binding is skipped automatically and the Reasoning Engine SA bindings (Item 1) handle basic access.
 
 ---
 

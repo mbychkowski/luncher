@@ -17,7 +17,7 @@
 Serves the catering menu from ``data/catering/catering_menu.json`` out of an
 in-memory SQLite database, so the scheduling agent works without a real BigQuery
 dataset. Without it you get ``404 Not found: Dataset <project>:catering`` unless
-``scripts/02-init-api.sh`` has been run, and the agent quietly invents menu items.
+``scripts/04-cater-agent-bq-seed.sh`` has been run, and the agent quietly invents menu items.
 
 Drop-in: it exposes the same three tools the real server does (``run_query``,
 ``list_tables_in_dataset``, ``get_table``) and accepts -- and ignores -- the

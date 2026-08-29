@@ -39,7 +39,7 @@ Start all the agents in `/agents/` locally, with hot reloading enabled. If any a
 
 ### 3. Validate local agent
 
-Visit http://localhost:8080/dev-ui/?app=luncher_agent and enter a prompt, like `plan a lunch meeting for tuesday`. Verify that the application continues to function, and now includes catering options
+Visit http://localhost:8080/dev-ui/?app=app and enter a prompt, like `plan a lunch meeting for tuesday`. Verify that the application continues to function, and now includes catering options
 
 ## Step 2. First deployment
 

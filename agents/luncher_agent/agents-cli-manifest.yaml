@@ -5,8 +5,8 @@ region: "us-central1"
 base_template: "adk"
 language: "python"
 create_params:
-  deployment_target: "cloud_run"
-  session_type: "in_memory"
-  cicd_runner: "skip"
+  deployment_target: agent_runtime
   is_a2a: true
+  session_type: in_memory
+  cicd_runner: skip
   agent_guidance_filename: "GEMINI.md"

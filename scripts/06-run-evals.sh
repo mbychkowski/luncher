@@ -19,9 +19,9 @@ set -euo pipefail
 # Runs an agent's eval suite against the copy of it running locally: inference
 # first, then grading.
 #
-#   ./scripts/05-run-evals.sh sched
-#   ./scripts/05-run-evals.sh luncher tests/eval/datasets/basic-dataset.json
-#   ./scripts/05-run-evals.sh luncher --a2a
+#   ./scripts/06-run-evals.sh sched
+#   ./scripts/06-run-evals.sh luncher tests/eval/datasets/basic-dataset.json
+#   ./scripts/06-run-evals.sh luncher --a2a
 #
 # --a2a drives the A2A endpoint instead of the ADK REST one. They deliver
 # different responses to the same prompt: the A2A executor withholds every author

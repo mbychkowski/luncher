@@ -52,11 +52,17 @@ Deploy all agents
 
 ### 2. Validate deployed agent 
 
-When all deployments have completed, visit the deployed `luncher_agent` UI on Cloud Run and confirm that the catering options are presented.
+When all deployments have completed, visit the deployed `luncher_agent` on Agent Runtime / Gemini Enterprise and confirm that the catering options are presented.
 
 ## Step 3. Access catering data via MCP
 
-### 1. Review BigQuery dataset
+### 1. Initialize and review BigQuery dataset
+
+Run the BigQuery seed script to create the `catering` dataset and populate the `menu_items` table:
+
+```bash
+./scripts/04-cater-agent-bq-seed.sh
+```
 
 In Google Cloud console, visit BigQuery and find dataset: `catering`. Within that dataset, find table: `menu_items`. Query it to explore the catering data it contains.
 
@@ -85,7 +91,7 @@ Redeploy the agents which have changed.
 
 ### 5. Validate local agent
 
-When all deployments have completed, visit the deployed `luncher_agent` UI on Cloud Run and confirm that catering options are now dynamically generated.
+When all deployments have completed, visit the deployed `luncher_agent` on Agent Runtime / Gemini Enterprise and confirm that catering options are now dynamically generated.
 
 ## Step 4. Store user preferences as memories
 
@@ -120,7 +126,7 @@ Redeploy the agents which have changed.
 
 ### 4. Validate deployed agent
 
-When all deployments have completed, visit the deployed `luncher_agent` UI on Cloud Run and confirm that memory tools are functional.
+When all deployments have completed, visit the deployed `luncher_agent` on Agent Runtime / Gemini Enterprise and confirm that memory tools are functional.
 
 ## Step 5. Add evaluations
 [TODO]

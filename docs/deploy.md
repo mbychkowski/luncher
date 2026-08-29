@@ -1,38 +1,47 @@
 # Deploying agents to Google Cloud
 
-Once tested locally, deploy your agents to **Gemini Enterprise Agent Platform (GEAP) Agent Runtime** and **Cloud Run** and interact with them in the Cloud Console. All deployment commands below execute directly from the repository root.
+Once tested locally, deploy your agents to **Gemini Enterprise Agent Platform (GEAP) Agent Runtime** and interact with them in the Cloud Console. All deployment commands below execute directly from the repository root.
 
-### Step 1: Deploying Agents to Google Cloud
+## Multi-Agent Agent Descriptions
 
-In this multi-agent architecture:
-- 🎯 **Strategy Agent** (`strat_agent`) and 📅 **Scheduling Agent** (`sched_agent`) deploy to **Gemini Enterprise Agent Platform (GEAP) Agent Runtime**.
-- 👑 **Luncher Orchestrator** (`luncher_agent`) deploys as a containerized service on **Cloud Run**.
+The system consists of 4 specialized agents cooperating over the **Agent-to-Agent (A2A)** protocol. In this section 3 of the 4 specialized agents will be deployed and the 4th agent (`cater_agent`) will be built up from scratch:
 
-> **Note — why `sched_agent` is on Agent Runtime.** It stores team bookings in Memory
-> Bank, addressed as `reasoningEngines/<ENGINE_ID>`. Agent Runtime injects
-> `GOOGLE_CLOUD_AGENT_ENGINE_ID`, so the host *is* the memory host — no separate
-> engine to keep alive. Cloud Run injects nothing.
+| Agent | Directory / Name | Role & Description | Deployment Target | Connecting Tools / Subagents |
+| :--- | :--- | :--- | :--- | :--- |
+| 👑 **Luncher Orchestrator** | `luncher_agent` | **Primary Workflow Coordinator**: Orchestrates end-to-end lunch planning across sub-agents in a 2-stage pipeline (parallel gathering then synthesis). | **Agent Runtime** (`agents-cli deploy`) | • **Subagents**: `strategy_agent`, `scheduling_agent`, `cater_agent` (via `parallel_info_gatherer`)<br>• **Internal Agent**: `lunch_synthesizer`<br>• **Tools/Plugins**: `propose_lunch_tool`, `a2ui_emit_callback`, `A2uiHistoryPlugin` |
+| 🎯 **Strategy Agent** | `strat_agent` | **Corporate Strategy Analyst**: Analyzes company strategy documents and product launch roadmaps (OmniChef, VisionSphere) to provide contextual justifications. | **Agent Runtime** (`agents-cli deploy`) | • **Tools**: `inspect_strategy_documents` (reads PDFs from GCS bucket `gs://${STRATEGY_DOCS_BUCKET}` or local directory)<br>• **Subagent of**: `luncher_agent` |
+| 📅 **Scheduling Agent** | `sched_agent` | **Meeting & Calendar Coordinator**: Evaluates team schedules, detects overlaps, proposes ranked time slots, and manages team bookings. | **Agent Runtime** (`agents-cli deploy` with `--agent-identity`) | • **Tools**: `get_team_members`, `book_meeting`, `get_bookings`, `cancel_booking`, `cancel_all_bookings`<br>• **Storage**: Reasoning Engine Memory Bank (team bookings)<br>• **Subagent of**: `luncher_agent` |
+| 🥪 **Catering Agent** *(Upcoming)* | `cater_agent` | **Catering & Dietary Coordinator**: Suggests balanced, themed lunch menus and records/filters team dietary preferences. *(To be built from scratch).* | **Agent Runtime** (`agents-cli deploy` with `--agent-identity`) | • **Tools**: `fetch_catering_data` (BigQuery `catering.menu_items` via MCP `execute_sql`), dietary preference memory tools<br>• **Storage**: Reasoning Engine Memory Bank (dietary preferences)<br>• **Subagent of**: `luncher_agent` |
 
-> **Important — the orchestrator must be on Cloud Run, because it renders A2UI.** A2UI is an
-> A2A *extension*, negotiated per request: the client sends `X-A2A-Extensions`,
-> and the server must echo that header back before the client may interpret the
-> surface. Agent Runtime's `/api/` passthrough replaces response headers
-> wholesale — nothing the container sets reaches the caller — so the echo never
-> arrives and Gemini Enterprise renders a **blank reply, with no error**. Cloud
-> Run passes the header through. This is a platform constraint; no code fixes it.
+> **NOTE**
+>
+> **Catering Agent Development:** We will come back to the Catering Agent (`cater_agent`) and build it up from scratch in a dedicated implementation phase (see [Adding the catering agent](cater_agent.md)).
 
-**1. Load the environment.** Every deployed agent gets these.
+> **NOTE**
+>
+> Why agents deploy to Agent Runtime:
+>
+> - **Injected Memory Bank Engine:** `sched_agent` and `cater_agent` store team bookings and dietary preferences in Memory Bank (`reasoningEngines/<ENGINE_ID>`). Agent Runtime automatically injects `GOOGLE_CLOUD_AGENT_ENGINE_ID`, so the host *is* the memory host without needing separate engine infrastructure.
+> - **Agent Identity:** Runtime service calls authenticate seamlessly via Application Default Credentials (ADC) and Agent Identity.
+> - **Orchestrator Hosting:** `luncher_agent` deploys directly to Agent Runtime, serving both ADK reasoning engine routes and A2A endpoints seamlessly.
+
+---
+
+## Deploying the agents to GEAP Agent Runtime
+
+### Step 1: Load the environment
+
+Every deployed agent gets these, environment variables in their runtime.
 
 ```bash
 source .env
-: "${GOOGLE_CLOUD_PROJECT_ID:?not set -- source .env from the repository root}"
-: "${GOOGLE_CLOUD_LOCATION:?not set -- source .env from the repository root}"
+
 BASE_ENV="GOOGLE_GENAI_MODEL=${GOOGLE_GENAI_MODEL},GOOGLE_GENAI_LOCATION=${GOOGLE_GENAI_LOCATION},GOOGLE_CLOUD_PROJECT_ID=${GOOGLE_CLOUD_PROJECT_ID},GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION}"
 ```
 
-**Serve the strategy PDFs from Cloud Storage — optional.** `strat_agent` reads
-the PDFs bundled in `agents/strat_agent/data/docs/` unless `STRATEGY_DOCS_BUCKET`
-names a bucket. Same image, same code; one variable picks the branch. Skippable.
+### Step 2 (Optional): Serve the strategy PDFs from Cloud Storage
+
+`strat_agent` reads the PDFs bundled in-memory, `agents/strat_agent/data/docs/`, unless `STRATEGY_DOCS_BUCKET` names a bucket. Same image, same code; one variable picks the branch. Skippable.
 
 ```bash
 export STRATEGY_DOCS_BUCKET="${GOOGLE_CLOUD_PROJECT_ID}-strategy-docs"
@@ -53,76 +62,60 @@ The grant goes to the **Agent Runtime service agent** (`gcp-sa-aiplatform-re`),
 which `03-setup-iam.sh` provisions — so run this after it. The `ls` should list
 eight PDFs. The strategy deploy below picks the variable up on its own.
 
-**2. Deploy the Strategy Agent** to Agent Runtime.
-
-`${VAR:+…}` appends `STRATEGY_DOCS_BUCKET` only when set, so one command covers
-both paths. Agent Runtime rejects an env var with an empty value:
-`400 INVALID_ARGUMENT … env[4].value; Required field is not set`.
+### Step 3: Deploy the Strategy Agent (`strat_agent`) to Agent Runtime.
 
 ```bash
-(cd agents/strat_agent && agents-cli deploy --project "$GOOGLE_CLOUD_PROJECT_ID" --region "$GOOGLE_CLOUD_LOCATION" \
-  --update-env-vars "$BASE_ENV${STRATEGY_DOCS_BUCKET:+,STRATEGY_DOCS_BUCKET=$STRATEGY_DOCS_BUCKET}")
-```
-
-**3. Deploy the Scheduling Agent** to Agent Runtime — this engine also hosts the
-bookings Memory Bank. Takes 5-10 min; add `--no-wait` and poll
-`agents-cli deploy --status` if the command may time out.
-
-```bash
-(cd agents/sched_agent && agents-cli deploy --project "$GOOGLE_CLOUD_PROJECT_ID" --region "$GOOGLE_CLOUD_LOCATION" \
+uv --directory agents/strat_agent run agents-cli deploy \
+  --project "$GOOGLE_CLOUD_PROJECT_ID" \
+  --region "$GOOGLE_CLOUD_LOCATION" \
   --agent-identity \
-  --update-env-vars "$BASE_ENV,BIGQUERY_LOCATION=${BIGQUERY_LOCATION}")
+  --update-env-vars "$BASE_ENV${STRATEGY_DOCS_BUCKET:+,STRATEGY_DOCS_BUCKET=$STRATEGY_DOCS_BUCKET}"
 ```
 
-**4. Resolve the sub-agent card URLs** the orchestrator calls over A2A. The
-variable names derive from the sub-agent names in `luncher_agent/app/agent.py` —
-a name that does not match is ignored silently and falls back to localhost.
+> **NOTE**
+>
+> `${VAR:+…}` appends `STRATEGY_DOCS_BUCKET` only when set, so one command covers
+> both paths. Agent Runtime rejects an env var with an empty value:
+> `400 INVALID_ARGUMENT … env[4].value; Required field is not set`.
+
+### Step 4: Deploy the Scheduling Agent to Agent Runtime
 
 ```bash
-STRATEGY_AGENT_URL=$(curl -s -H "Authorization: Bearer $(gcloud auth print-access-token)" \
-  "https://${GOOGLE_CLOUD_LOCATION}-aiplatform.googleapis.com/v1/projects/${GOOGLE_CLOUD_PROJECT_ID}/locations/${GOOGLE_CLOUD_LOCATION}/reasoningEngines" \
-  | jq -r '.reasoningEngines[] | select(.displayName=="strat-agent") | .name' \
-  | sed -E "s#projects/(.+)/locations/(.+)/reasoningEngines/(.+)#https://\2-aiplatform.googleapis.com/reasoningEngines/v1/projects/\1/locations/\2/reasoningEngines/\3/api/a2a/app/.well-known/agent-card.json#")
-
-SCHEDULING_AGENT_URL=$(curl -s -H "Authorization: Bearer $(gcloud auth print-access-token)" \
-  "https://${GOOGLE_CLOUD_LOCATION}-aiplatform.googleapis.com/v1/projects/${GOOGLE_CLOUD_PROJECT_ID}/locations/${GOOGLE_CLOUD_LOCATION}/reasoningEngines" \
-  | jq -r '.reasoningEngines[] | select(.displayName=="sched-agent") | .name' \
-  | sed -E "s#projects/(.+)/locations/(.+)/reasoningEngines/(.+)#https://\2-aiplatform.googleapis.com/reasoningEngines/v1/projects/\1/locations/\2/reasoningEngines/\3/api/a2a/app/.well-known/agent-card.json#")
-
-echo "strat: ${STRATEGY_AGENT_URL:-UNRESOLVED}"; echo "sched: ${SCHEDULING_AGENT_URL:-UNRESOLVED}"
+uv --directory agents/sched_agent run agents-cli deploy \
+  --project "$GOOGLE_CLOUD_PROJECT_ID" \
+  --region "$GOOGLE_CLOUD_LOCATION" \
+  --agent-identity \
+  --no-wait \
+  --update-env-vars "$BASE_ENV,BIGQUERY_LOCATION=${BIGQUERY_LOCATION}"
 ```
 
-**5. Resolve the orchestrator's own engine**, created by `02-init-api.sh` to hold
-its sessions. Cloud Run injects nothing, so it is passed
-explicitly.
+> **NOTE**
+>
+> This engine also hosts the bookings Memory Bank. Takes 5-10 min; add `--no-wait` and poll `agents-cli deploy --status` if the command may time out.
+
+### Step 5: Deploy the orchestrating Luncher Agent to Agent Runtime
 
 ```bash
-LUNCHER_ENGINE_ID=$(curl -s -H "Authorization: Bearer $(gcloud auth print-access-token)" \
-  "https://${GOOGLE_CLOUD_LOCATION}-aiplatform.googleapis.com/v1/projects/${GOOGLE_CLOUD_PROJECT_ID}/locations/${GOOGLE_CLOUD_LOCATION}/reasoningEngines" \
-  | jq -r '.reasoningEngines[] | select(.displayName=="luncher-agent") | .name' \
-  | sed -E 's#.*/reasoningEngines/##')
-
-echo "luncher engine: ${LUNCHER_ENGINE_ID:-UNRESOLVED}"
+uv --directory agents/luncher_agent run agents-cli deploy \
+  --project "$GOOGLE_CLOUD_PROJECT_ID" \
+  --region "$GOOGLE_CLOUD_LOCATION" \
+  --agent-identity \
+  --update-env-vars "$BASE_ENV"
 ```
 
-**6. Deploy the Luncher Orchestrator** to Cloud Run. `APP_URL` is what the agent
-card advertises; without it the card falls back to localhost and no client can
-reach the agent.
+### Step 6: Deploy the Catering Agent to Agent Runtime
+
+> **NOTE**
+>
+> We will come back to `cater_agent` and build it up from scratch following [`cater_agent.md`](cater_agent.md) before executing this step
 
 ```bash
-LUNCHER_URL="https://luncher-agent-$(gcloud projects describe "$GOOGLE_CLOUD_PROJECT_ID" --format='value(projectNumber)').${GOOGLE_CLOUD_LOCATION}.run.app"
-(cd agents/luncher_agent && agents-cli deploy --deployment-target cloud_run \
-  --project "$GOOGLE_CLOUD_PROJECT_ID" --region "$GOOGLE_CLOUD_LOCATION" --service-name luncher-agent \
-  --update-env-vars "$BASE_ENV,STRATEGY_AGENT_URL=${STRATEGY_AGENT_URL},SCHEDULING_AGENT_URL=${SCHEDULING_AGENT_URL},APP_URL=${LUNCHER_URL},GOOGLE_CLOUD_AGENT_ENGINE_ID=${LUNCHER_ENGINE_ID},GOOGLE_CLOUD_AGENT_ENGINE_LOCATION=${GOOGLE_CLOUD_LOCATION}")
+uv --directory agents/cater_agent run agents-cli deploy \
+  --project "$GOOGLE_CLOUD_PROJECT_ID" \
+  --region "$GOOGLE_CLOUD_LOCATION" \
+  --agent-identity \
+  --update-env-vars "$BASE_ENV,BIGQUERY_LOCATION=${BIGQUERY_LOCATION}"
 ```
-
-> **Important:** give the orchestrator its **own** engine, never `sched_agent`'s — the variable
-> selects the session store. Omit it and
-> `get_session_service()` silently falls back to `InMemorySessionService`, losing
-> session state across restarts.
-
-The orchestrator's own agent card is served at `/a2a/luncher_agent/.well-known/agent-card.json`
-(the path carries the ADK `App` name), while both sub-agents serve theirs at `/a2a/app/...`.
 
 ---
 

@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 # Sessions would otherwise be written to the deployed agent's
 # Agent Engine. Popped before anything imports app.app_utils.services, whose
-# builders are cached on first call. scripts/05-run-evals.sh does the same.
+# builders are cached on first call. scripts/06-run-evals.sh does the same.
 os.environ.pop("GOOGLE_CLOUD_AGENT_ENGINE_ID", None)
 
 AGENT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

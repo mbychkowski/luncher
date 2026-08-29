@@ -14,11 +14,9 @@ The Orchestrator acts as the "cognitive frontend" or user gateway, delegating sp
 
 ## ☁️ Deployment Target
 
-`luncher_agent` deploys to **Cloud Run** (`deployment_target: cloud_run`). It renders
-A2UI, which a client may only interpret once the server echoes the request's
-`X-A2A-Extensions` header — and Agent Runtime's `/api/` passthrough replaces response
-headers wholesale, so the echo never reaches the caller. The two sub-agents emit no
-A2UI and deploy to Agent Runtime. See the root `README.md` for the deployment sequence.
+`luncher_agent` deploys to **Agent Runtime** (`deployment_target: agent_runtime`). It coordinates
+with sub-agents over the A2A protocol and serves reasoning engine routes, A2A endpoints, and the
+agent card. See the root `README.md` and `docs/deploy.md` for the deployment sequence.
 
 ---
 

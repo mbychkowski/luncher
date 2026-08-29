@@ -53,9 +53,7 @@ Run the following shell scripts in order from the repository root.
 ./scripts/02-init-api.sh
 ```
 
-* **Main Takeaway**: Enables the required Google Cloud APIs, creates the BigQuery
-  `catering` dataset and loads the menu data, and creates the Agent Engine that
-  holds the orchestrator's sessions.
+* **Main Takeaway**: Enables the required Google Cloud APIs and sets the default compute region for your GCP project.
 * **Enabled APIs Summary**:
   | API Service | Purpose |
   | :--- | :--- |

@@ -78,7 +78,7 @@ uv --directory agents/strat_agent run agents-cli deploy \
 > both paths. Agent Runtime rejects an env var with an empty value:
 > `400 INVALID_ARGUMENT … env[4].value; Required field is not set`.
 
-### Step 4: Deploy the Scheduling Agent to Agent Runtime
+### Step 4: Deploy the Scheduling Agent (`sched_agent`) to Agent Runtime
 
 ```bash
 uv --directory agents/sched_agent run agents-cli deploy \
@@ -93,7 +93,7 @@ uv --directory agents/sched_agent run agents-cli deploy \
 >
 > This engine also hosts the bookings Memory Bank. Takes 5-10 min; add `--no-wait` and poll `agents-cli deploy --status` if the command may time out.
 
-### Step 5: Deploy the orchestrating Luncher Agent to Agent Runtime
+### Step 5: Deploy the orchestrating Luncher Agent (`luncher_agent`) to Agent Runtime
 
 Pass the deployed sub-agents' Reasoning Engine unique IDs so the orchestrator configures their Agent Runtime A2A endpoints.
 
@@ -120,7 +120,7 @@ uv --directory agents/luncher_agent run agents-cli deploy \
 > SCHED_ENGINE_ID="1234567890123456789"
 > ```
 
-### Step 6: Deploy the Catering Agent to Agent Runtime
+### Step 6: Deploy the Catering Agent (`cater_agent`) to Agent Runtime
 
 > **NOTE**
 >

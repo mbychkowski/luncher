@@ -147,5 +147,5 @@ the agent, which delegates to `sched_agent` to write the booking.
 
 ---
 
-| [⬅️ Previous: 3. Deploying to Cloud](deploy.md) | [📚 Getting Started](../README.md#getting-started) | [Next: 5. Catering Agent ➡️](cater_agent.md) |
+| [⬅️ Previous: 4. Extending Luncher with a catering agent](4_cater_agent.md) | [📚 Getting Started](../README.md#getting-started) | [Next: 6. Cleanup ➡️](6_cleanup.md) |
 | :--- | :---: | ---: |

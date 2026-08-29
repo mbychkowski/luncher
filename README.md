@@ -106,5 +106,5 @@ See: [Cleanup](docs/6_cleanup.md)
 
 ---
 
-| 🏠 Overview | [📚 Getting Started](#getting-started) | [Start: 1. Setup & Initialization ➡️](docs/setup.md) |
+| 🏠 Overview | [📚 Getting Started](#getting-started) | [Start: 1. Setup & Initialization ➡️](docs/1_setup.md) |
 | :--- | :---: | ---: |

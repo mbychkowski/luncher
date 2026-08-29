@@ -136,5 +136,5 @@ Run `/learn` and follow the prompts to help Antigravity improve based on learnin
 
 ---
 
-| [⬅️ Previous: 4. Registering to Gemini Enterprise](ge.md) | [📚 Getting Started](../README.md#getting-started) | [Next: 6. Cleanup ➡️](cleanup.md) |
+| [⬅️ Previous: 3. Deploying to Cloud & Agent Platform Playground](3_deploy.md) | [📚 Getting Started](../README.md#getting-started) | [Next: 5. Registering to Gemini Enterprise ➡️](5_ge.md) |
 | :--- | :---: | ---: |

@@ -15,5 +15,5 @@ agents-cli deploy --agent-identity
 - In automated or non-interactive environments where the project is resolved automatically, include `--no-confirm-project` to prevent interactive prompt blocking:
 
 ```bash
-agents-cli deploy --agent-identity --no-wait --no-confirm-project
+agents-cli deploy --agent-identity --no-confirm-project
 ```

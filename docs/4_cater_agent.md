@@ -34,7 +34,7 @@ For the initial version, DO NOT implement any actual retrieval of menu items. In
 Enter the following command to start the agents locally:
 
 ```
-Start all the agents in `/agents/` locally, with hot reloading enabled. If any are already running, stop them and re-start them to reflect the most recent changes.
+Kill any processes on ports 8080-8083, then start all the agents in `/agents/` locally.
 ```
 
 ### 3. Validate local agent

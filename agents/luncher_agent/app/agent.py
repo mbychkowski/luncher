@@ -75,8 +75,21 @@ def format_agent_runtime_url(
         loc = parts[3] if len(parts) > 3 else (location or "us-central1")
         resource_path = clean_id
     else:
-        proj = project_id or os.getenv("GOOGLE_CLOUD_PROJECT_ID", "")
-        loc = location or os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+        proj = (
+            project_id
+            or os.getenv("GOOGLE_CLOUD_PROJECT_ID")
+            or os.getenv("GOOGLE_CLOUD_PROJECT")
+        )
+        env_loc = (
+            location
+            or os.getenv("GOOGLE_CLOUD_AGENT_ENGINE_LOCATION")
+            or os.getenv("GOOGLE_CLOUD_REGION")
+            or os.getenv("REGION")
+            or os.getenv("GOOGLE_CLOUD_LOCATION")
+        )
+        if not env_loc or env_loc == "global":
+            env_loc = "us-central1"
+        loc = env_loc
         resource_path = f"projects/{proj}/locations/{loc}/reasoningEngines/{clean_id}"
     return (
         f"https://{loc}-aiplatform.googleapis.com/reasoningEngines/v1/"

@@ -40,7 +40,9 @@ case "$AGENT" in
            DATASET="tests/eval/datasets/bookings-dataset.json" ;;
   strat)   DIR="agents/strat_agent";   PORT=8081; APP="strat_agent"
            DATASET="tests/eval/datasets/basic-dataset.json" ;;
-  *) echo "Usage: $0 {luncher|sched|strat} [dataset]"; exit 1 ;;
+  cater)   DIR="agents/cater_agent";   PORT=8083; APP="cater_agent"
+           DATASET="tests/eval/datasets/catering-dataset.json" ;;
+  *) echo "Usage: $0 {luncher|sched|strat|cater} [dataset]"; exit 1 ;;
 esac
 A2A=false
 if [ "${2:-}" = "--a2a" ]; then

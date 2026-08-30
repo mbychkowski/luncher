@@ -1,6 +1,6 @@
 """Runs a dataset over the agent's A2A endpoint and writes traces.
 
-`agents-cli eval generate` drives the ADK REST path. A2UI clients such as Gemini
+`agents-cli eval generate` drives the ADK REST path. Clients such as Gemini
 Enterprise use A2A, where the executor withholds every author but the
 synthesizer, so the two paths deliver different responses to the same prompt --
 and only this one reflects what a user is shown.

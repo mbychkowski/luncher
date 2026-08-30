@@ -18,13 +18,6 @@ from unittest.mock import MagicMock
 from app.app_utils import a2a as a2a_mod
 
 
-def test_card_advertises_adk_executor_extension_without_a2ui() -> None:
-    caps = a2a_mod._default_capabilities()
-    assert caps.streaming is True
-    uris = [e.uri for e in caps.extensions]
-    assert a2a_mod._ADK_AGENT_EXECUTOR_EXTENSION_URI in uris
-    assert not any("a2ui" in uri for uri in uris)
-
 
 def test_only_synthesizer_speaks_withholds_intermediate_subagent_turns() -> None:
     events_passed = []

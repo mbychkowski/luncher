@@ -31,12 +31,14 @@ The system consists of 4 specialized agents cooperating over the **Agent-to-Agen
 
 ### Step 1: Load the environment
 
-Every deployed agent gets these, environment variables in their runtime.
+Every deployed agent gets these environment variables in their runtime. `BASE_ENV` configures project and model connectivity, while `AGENT_SETTINGS_ENV` enables runtime telemetry and prompt/response logging required for GEAP Cloud evaluations.
 
 ```bash
 source .env
 
 BASE_ENV="GOOGLE_GENAI_MODEL=${GOOGLE_GENAI_MODEL},GOOGLE_GENAI_LOCATION=${GOOGLE_GENAI_LOCATION},GOOGLE_CLOUD_PROJECT_ID=${GOOGLE_CLOUD_PROJECT_ID},GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION}"
+
+AGENT_SETTINGS_ENV="GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY=true,OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=EVENT_ONLY"
 ```
 
 ### Step 2 (Optional): Serve the strategy PDFs from Cloud Storage
@@ -69,7 +71,7 @@ uv --directory agents/strat_agent run agents-cli deploy \
   --project "$GOOGLE_CLOUD_PROJECT_ID" \
   --region "$GOOGLE_CLOUD_LOCATION" \
   --agent-identity \
-  --update-env-vars "$BASE_ENV${STRATEGY_DOCS_BUCKET:+,STRATEGY_DOCS_BUCKET=$STRATEGY_DOCS_BUCKET}"
+  --update-env-vars "$BASE_ENV,$AGENT_SETTINGS_ENV${STRATEGY_DOCS_BUCKET:+,STRATEGY_DOCS_BUCKET=$STRATEGY_DOCS_BUCKET}"
 ```
 
 > **NOTE**
@@ -86,7 +88,7 @@ uv --directory agents/sched_agent run agents-cli deploy \
   --region "$GOOGLE_CLOUD_LOCATION" \
   --agent-identity \
   --no-wait \
-  --update-env-vars "$BASE_ENV,BIGQUERY_LOCATION=${BIGQUERY_LOCATION}"
+  --update-env-vars "$BASE_ENV,$AGENT_SETTINGS_ENV,BIGQUERY_LOCATION=${BIGQUERY_LOCATION}"
 ```
 
 > **NOTE**
@@ -109,7 +111,7 @@ uv --directory agents/luncher_agent run agents-cli deploy \
   --project "$GOOGLE_CLOUD_PROJECT_ID" \
   --region "$GOOGLE_CLOUD_LOCATION" \
   --agent-identity \
-  --update-env-vars "$BASE_ENV${STRAT_ENGINE_ID:+,STRATEGY_AGENT_ENGINE_ID=$STRAT_ENGINE_ID}${SCHED_ENGINE_ID:+,SCHEDULING_AGENT_ENGINE_ID=$SCHED_ENGINE_ID}"
+  --update-env-vars "$BASE_ENV,$AGENT_SETTINGS_ENV${STRAT_ENGINE_ID:+,STRATEGY_AGENT_ENGINE_ID=$STRAT_ENGINE_ID}${SCHED_ENGINE_ID:+,SCHEDULING_AGENT_ENGINE_ID=$SCHED_ENGINE_ID}"
 ```
 
 > **NOTE**
@@ -126,6 +128,10 @@ Test the orchestrator agent (which will also invoke the other agents):
 - visit [Deployments on Agent Runtime](https://console.cloud.google.com/agent-platform/runtimes) and navigate to "luncher-agent"
 - Click "Playground"
 - enter a prompt like `Schedule a lunch meeting for Monday`
+
+> **NOTE**
+>
+> We will come back to `cater_agent` and build it up from scratch following [`cater_agent.md`](cater_agent.md) before executing this step
 
 ---
 

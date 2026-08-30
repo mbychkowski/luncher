@@ -87,11 +87,9 @@ root_agent = Agent(
         "'Diego is only free Friday morning' -- overrides their stored availability, so a 12:00 slot does not include "
         "Diego. Never state a count that contradicts something you were just told; if a constraint rules someone out, "
         "say who and pick a slot that fits, or say plainly that none fits everyone.\n"
-        "- STEP 3c (FOOD REMINDER): Always end meeting shortlist proposals and booking confirmations with the exact phrase: "
-        "'You might want to order some food for this meeting.'\n"
-        "- STEP 4 (BOOKING EXECUTION): Only call 'book_meeting' after the user explicitly accepts one of the slots. Never auto-book without consent. Confirm the booking and end with the food reminder phrase.\n"
+        "- STEP 4 (BOOKING EXECUTION): Only call 'book_meeting' after the user explicitly accepts one of the slots. Never auto-book without consent. Confirm the booking clearly with slot and booking details.\n"
         "- STEP 5 (REJECTION & ALTERNATIVES): If the user rejects the whole shortlist, search for the "
-        "next best slots and present a fresh shortlist ending with the food reminder phrase."
+        "next best slots and present a fresh shortlist."
     ),
     tools=[
         get_team_members,

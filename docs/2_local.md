@@ -61,5 +61,5 @@ uv --directory agents/luncher_agent run agents-cli run "Plan a team lunch meetin
 
 ---
 
-| [⬅️ Previous: 1. Setup](setup.md) | [📚 Getting Started](../README.md#getting-started) | [Next: 3. Deploying to Cloud ➡️](deploy.md) |
+| [⬅️ Previous: 1. Setup](1_setup.md) | [📚 Getting Started](../README.md#getting-started) | [Next: 3. Deploying to Cloud ➡️](3_deploy.md) |
 | :--- | :---: | ---: |

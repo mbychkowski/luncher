@@ -136,5 +136,5 @@ uv --directory agents/cater_agent run agents-cli deploy \
 
 ---
 
-| [⬅️ Previous: 2. Local Testing](local.md) | [📚 Getting Started](../README.md#getting-started) | [Next: 4. Registering to Gemini Enterprise ➡️](ge.md) |
+| [⬅️ Previous: 2. Local Testing](2_local.md) | [📚 Getting Started](../README.md#getting-started) | [Next: 4. Extending Luncher with a catering agent ➡️](4_cater_agent.md) |
 | :--- | :---: | ---: |

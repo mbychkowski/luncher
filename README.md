@@ -87,24 +87,24 @@ graph TD
 ## Getting Started
 
 ### 1. 🛠️ Setup & Initialization
-See: [Setup](docs/setup.md)
+See: [Setup](docs/1_setup.md)
 
 ### 2. 💻 Running & Testing Agents Locally
-See: [Local testing](docs/local.md)
+See: [Local testing](docs/2_local.md)
 
 ### 3. ☁️ Deploying to Cloud & Agent Platform Playground
-See: [Deploying to Cloud](docs/deploy.md)
+See: [Deploying to Cloud](docs/3_deploy.md)
 
 ### 4. 🥪 Extending Luncher with a catering agent
-See: [Adding the catering agent](docs/cater_agent.md)
+See: [Adding the catering agent](docs/4_cater_agent.md)
 
 ### 5. ✨ Registering to Gemini Enterprise
-See: [Registering to Gemini Enterprise](docs/ge.md)
+See: [Registering to Gemini Enterprise](docs/5_ge.md)
 
 ### 6. 🧹 Cleanup
-See: [Cleanup](docs/cleanup.md)
+See: [Cleanup](docs/6_cleanup.md)
 
 ---
 
-| 🏠 Overview | [📚 Getting Started](#getting-started) | [Start: 1. Setup & Initialization ➡️](docs/setup.md) |
+| 🏠 Overview | [📚 Getting Started](#getting-started) | [Start: 1. Setup & Initialization ➡️](docs/1_setup.md) |
 | :--- | :---: | ---: |

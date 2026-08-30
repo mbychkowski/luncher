@@ -117,5 +117,5 @@ Run the following shell scripts in order from the repository root.
 
 ---
 
-| [🏠 Return to README](../README.md) | [📚 Getting Started](../README.md#getting-started) | [Next: 2. Local Testing ➡️](local.md) |
+| [🏠 Return to README](../README.md) | [📚 Getting Started](../README.md#getting-started) | [Next: 2. Local Testing ➡️](2_local.md) |
 | :--- | :---: | ---: |

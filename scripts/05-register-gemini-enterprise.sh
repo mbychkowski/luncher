@@ -15,9 +15,7 @@ set -euo pipefail
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Registers a deployed agent with a Gemini Enterprise app over A2A, which is what
-# makes its A2UI surfaces render in Gemini Enterprise rather than only in the ADK
-# dev UI.
+# Registers a deployed agent with a Gemini Enterprise app over A2A
 #
 #   ./scripts/05-register-gemini-enterprise.sh              # print the payload, POST nothing
 #   ./scripts/05-register-gemini-enterprise.sh --apply      # actually register
@@ -32,8 +30,6 @@ set -euo pipefail
 #   AGENT_APP_NAME              the ADK `App` name, which the card path carries.
 #                               Defaults to luncher_agent; sub-agents use "app".
 #
-# A2UI needs an A2A registration served from Cloud Run: Agent Runtime's /api
-# passthrough strips the X-A2A-Extensions echo, so the surface renders as nothing.
 #
 # Gemini Enterprise calls the agent as an IAM principal, so before the registered
 # agent can answer, grant that principal permission to query the deployed agent
@@ -202,7 +198,7 @@ CARD=$(curl -sS -f -H "Authorization: Bearer ${CARD_TOKEN}" "$CARD_URL") || {
   exit 1
 }
 
-# Fail loudly rather than registering a card that cannot render A2UI.
+# Validate basic card structure
 python3 - "$CARD" <<'PY'
 import json, sys
 
@@ -216,12 +212,6 @@ if missing:
     sys.exit(f"Error: agent card is missing required fields: {', '.join(missing)}")
 
 extensions = (card.get("capabilities") or {}).get("extensions") or []
-if not any("a2ui" in (ext.get("uri") or "") for ext in extensions):
-    sys.exit(
-        "Error: the agent card does not declare the A2UI extension, so Gemini "
-        "Enterprise will not render its surfaces."
-    )
-
 print(f"  ok: {card['name']} v{card['version']}, protocol {card['protocolVersion']}")
 print(f"  url: {card['url']}")
 for ext in extensions:

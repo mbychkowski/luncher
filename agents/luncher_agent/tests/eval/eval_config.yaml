@@ -1,18 +1,10 @@
 metrics_to_run:
-  - a2ui_payload_valid
-  - a2ui_tool_called
+  - tool_trajectory
   - custom_response_quality
 
 custom_metrics:
-  # Deterministic (no model call). The headline metric: does the response carry a
-  # surface that actually renders? Score 0/1, so the mean over N runs reads
-  # directly as a success rate.
-  - name: a2ui_payload_valid
-    custom_function_file: a2ui_validity.py
-
-  # Deterministic. The synthesizer must call propose_lunch exactly once -- never
-  # zero (nothing renders) and never twice (duplicate surfaces).
-  - name: a2ui_tool_called
+  # Deterministic. The synthesizer must call format_lunch_proposal exactly once.
+  - name: tool_trajectory
     custom_function_file: tool_trajectory.py
 
   # Deterministic, and absent from metrics_to_run above. It grades the A2A
@@ -22,7 +14,6 @@ custom_metrics:
   # Add it back when grading traces captured over A2A.
   - name: single_voice
     custom_function_file: single_voice.py
-
 
   # Default: local LLM-as-judge (see response_quality.py). Runs in-process via
   # google-genai on Agent Platform (ADC) or Google AI Studio (GEMINI_API_KEY).

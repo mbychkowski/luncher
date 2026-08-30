@@ -1,6 +1,6 @@
 """Runs a dataset over the agent's A2A endpoint and writes traces.
 
-`agents-cli eval generate` drives the ADK REST path. A2UI clients such as Gemini
+`agents-cli eval generate` drives the ADK REST path. Clients such as Gemini
 Enterprise use A2A, where the executor withholds every author but the
 synthesizer, so the two paths deliver different responses to the same prompt --
 and only this one reflects what a user is shown.
@@ -104,10 +104,9 @@ def _prompts_of(case: dict) -> list[str]:
 def _score(cases: list[dict]) -> None:
     """Applies the metrics from eval_config_a2a.yaml and prints a summary."""
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    import a2ui_validity
     import single_voice
 
-    metrics = {"single_voice": single_voice, "a2ui_payload_valid": a2ui_validity}
+    metrics = {"single_voice": single_voice}
     print("\n== scores ==")
     totals: dict[str, list[float]] = {name: [] for name in metrics}
     for case in cases:

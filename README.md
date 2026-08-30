@@ -34,7 +34,7 @@ and Linux).
 
 Stage 1 gathers from two sub-agents concurrently: `strategy_agent` and `scheduling_agent`
 are remote A2A peers. Stage 2's `lunch_synthesizer` runs in the orchestrator's own process
-and renders the A2UI surface.
+and deterministically formats the structured Markdown proposal.
 
 ```mermaid
 graph TD
@@ -43,7 +43,7 @@ graph TD
     subgraph LuncherProcess ["👑 Luncher Orchestrator (Agent Runtime)"]
         LuncherSeq["luncher_agent (SequentialAgent)"]
         ParallelGatherer["parallel_info_gatherer (ParallelAgent)"]
-        Synthesizer["lunch_synthesizer<br/>propose_lunch → A2UI v0.8"]
+        Synthesizer["lunch_synthesizer<br/>format_lunch_proposal → Markdown"]
 
         LuncherSeq -->|Stage 1| ParallelGatherer
         LuncherSeq -->|Stage 2| Synthesizer
@@ -80,7 +80,7 @@ graph TD
     SchedA2A -->|3b. Availability & Bookings| ParallelGatherer
 
     ParallelGatherer -->|4. Combined Context Handoff| Synthesizer
-    Synthesizer -->|5. A2UI Proposal Response| User
+    Synthesizer -->|5. Structured Markdown Proposal| User
 ```
 ---
 

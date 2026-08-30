@@ -1,5 +1,14 @@
-# Auto-Reload Rule for Local Services
+# Auto-Reload Rule for Agents in /agents
 
-When running local services, dev servers, or agent servers (e.g. Uvicorn / FastAPI / Node / Vite), **ALWAYS** configure and run them using auto-reload (e.g., `reload=True` or `--reload`) if supported by the server framework.
+When starting an agent locally, always run from the repository root with auto-reloading enabled so file changes take effect immediately. Trigger reloading on the entire `agents` directory because the agents are interdependent.
 
-This ensures code modifications take effect immediately without requiring manual process restarts.
+Example:
+
+```bash
+uvx watchfiles "uv --directory agents/<agent_name> run main.py" agents
+```
+
+**Example:**
+```bash
+uvx watchfiles "uv --directory agents/sched_agent run main.py" agents
+```

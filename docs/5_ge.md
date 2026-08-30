@@ -20,10 +20,8 @@ and pass it as `GEMINI_ENTERPRISE_PROJECT_ID`; unset, the script uses
 
 ### Registering with Gemini Enterprise (`05-register-gemini-enterprise.sh`)
 
-Register the orchestrator as an **A2A** agent. This is not a preference: Gemini
-Enterprise learns that an agent can render A2UI from its **agent card**, and only an
-A2A registration has one. An ADK registration authenticates fine but renders every
-surface as raw JSON.
+Register the orchestrator as an **A2A** agent. Registering via A2A provides an
+agent card and ensures clean communication with Gemini Enterprise.
 
 **1. Resolve the orchestrator's Agent Engine ID.** Read from `deployment_metadata.json` produced when deploying `luncher_agent` to Agent Runtime:
 
@@ -93,9 +91,8 @@ one that renders surfaces as raw JSON. The display name comes from `--list`:
 ---
 
 ### Step 5: Test in Gemini Enterprise
-
-This is the surface the whole deployment is aimed at: the only one that renders
-the orchestrator's A2UI.
+ 
+ Interact with the deployed orchestrator in the Gemini Enterprise webapp.
 
 **1. Open the webapp.** **Gemini Enterprise > your app > Overview** carries the
 URL under *"Your Gemini Enterprise webapp is ready"*:
@@ -115,9 +112,7 @@ was registered with. If it is missing, nobody has been granted a role on it
 Plan a team lunch meeting for next week that aligns with our corporate strategy.
 ```
 
-The reply is the same A2UI proposal card the dev UI renders, and here the
-**Book this lunch** button works: Gemini Enterprise dispatches the action back to
-the agent, which delegates to `sched_agent` to write the booking.
+The reply is the structured Markdown proposal. You can confirm by replying in chat (e.g. *"Book Tuesday 12:00"* or *"Option 1 works"*), and the orchestrator delegates to `sched_agent` to write the booking.
 
 ---
 

@@ -52,14 +52,9 @@ then prompt the orchestrator, e.g.
 Plan a team lunch meeting for next week that aligns with our corporate strategy.
 ```
 
-The orchestrator replies with an A2UI proposal card ending in a booking button:
+The orchestrator replies with a structured Markdown lunch proposal including strategic rationale, team roster, ranked time slots with attendance counts, and a recommended option.
 
-<img src="../../docs/images/book-this-lunch-button.png" alt="Book this lunch" width="141">
-
-> **Note:** that button does nothing in the ADK dev UI, which renders A2UI but never
-> sends actions back to the agent. To book locally, confirm in chat instead — *"that
-> works, book it"*. The button works in Gemini Enterprise, whose A2UI client
-> dispatches the action.
+To book, reply directly in chat with your preferred slot (e.g., *"Book Tuesday 12:00"* or *"Option 1 works"*). The agent will book the meeting and return a confirmation with the booking details and food reminder.
 
 > **Note:** use `main.py`, not `adk web`. Both serve the same ADK dev UI, but `adk web`
 > builds its own app via the ADK CLI and therefore skips `app/fast_api_app.py` — so the

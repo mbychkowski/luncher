@@ -13,7 +13,6 @@ Repeats matter: the value of building the surface deterministically shows up as 
 """
 
 import asyncio
-import json
 import statistics
 import sys
 import time
@@ -24,7 +23,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from google.adk.runners import InMemoryRunner  # noqa: E402
 from google.genai.types import Content, Part  # noqa: E402
 
-from app.a2ui import A2UI_FORMAT, find_binding_problems  # noqa: E402
 from app.agent import synthesizer_agent  # noqa: E402
 
 CONTEXT = (
@@ -62,19 +60,14 @@ async def _one_run() -> dict:
         "problem": None,
     }
 
-    if "<a2ui-json>" not in text:
-        result["problem"] = "no A2UI block emitted"
+    if not text.strip():
+        result["problem"] = "no output text emitted"
         return result
 
-    try:
-        payload = json.loads(text.split("<a2ui-json>")[1].split("</a2ui-json>")[0])
-        A2UI_FORMAT.get_selected_catalog().validator.validate(payload)
-    except Exception as error:
-        result["problem"] = f"invalid payload: {error}"
-        return result
-
-    if problems := find_binding_problems(payload):
-        result["problem"] = "; ".join(problems)
+    required_snippets = ["#", "Strategic Rationale", "Included Team Members", "Proposed Time Slots"]
+    missing = [s for s in required_snippets if s.casefold() not in text.casefold()]
+    if missing:
+        result["problem"] = f"missing required sections: {missing}"
         return result
 
     result["valid"] = True

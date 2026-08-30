@@ -124,9 +124,9 @@ root_agent = Agent(
         "provided by the 'inspect_strategy_documents' tool and summarize the corporate strategy "
         "and key product initiatives (especially flagship launches such as OmniChef) implied by those documents.\n\n"
         "Rules for your output:\n"
-        "1. Always explicitly highlight major active product launches and strategic projects (e.g., OmniChef Global Launch, VisionSphere).\n"
-        "2. Your summary must be clear, concise, and structured with bullet points.\n"
-        "3. It must use high-quality markdown formatting.\n"
+        "1. Structure your output with clear Markdown headers, including '## Strategic Priorities & Key Initiatives' and '## Strategic Context'.\n"
+        "2. Always explicitly highlight major active product launches and strategic projects (e.g., OmniChef Global Launch, VisionSphere).\n"
+        "3. Your summary must be clear, concise, and structured with bullet points.\n"
         "4. Do not assume or hallucinate outside the contents of the provided documents.\n"
         "5. You must call the 'inspect_strategy_documents' tool first to retrieve the facts."
     ),

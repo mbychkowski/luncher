@@ -7,7 +7,7 @@ several times and describes the booking twice.
 
 Every author's contribution is a separate text part, so counting them measures
 the delivered result without attributing authorship -- which the A2A payload
-does not carry. Data parts are the A2UI surface and are not speech.
+does not carry.
 
 This grades traces captured over A2A (`05-run-evals.sh <agent> --a2a`). The ADK
 REST path does no withholding, so grading its traces scores 0 whatever the agent
@@ -49,7 +49,5 @@ def evaluate(instance):
         }
     return {
         "score": 1,
-        "explanation": (
-            f"One text part delivered, alongside {len(parts) - 1} data part(s)."
-        ),
+        "explanation": "One text part delivered from the synthesizer.",
     }

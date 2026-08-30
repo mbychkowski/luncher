@@ -15,7 +15,7 @@
           "role": "model",
           "parts": [
             {
-              "text": "A ranked shortlist of 2-4 time slots, each with how many of the team are free, ending with 'You might want to order some food for this meeting.'"
+              "text": "A ranked shortlist of 2-4 time slots, each with how many of the team are free."
             }
           ]
         }
@@ -36,7 +36,7 @@
           "role": "model",
           "parts": [
             {
-              "text": "A confirmation that the meeting was booked for Friday 12:00-13:00, quoting the booking id returned by book_meeting, and ending with 'You might want to order some food for this meeting.'"
+              "text": "A confirmation that the meeting was booked for Friday 12:00-13:00, quoting the booking id returned by book_meeting."
             }
           ]
         }

@@ -25,7 +25,7 @@ set -euo pipefail
 #
 # --a2a drives the A2A endpoint instead of the ADK REST one. They deliver
 # different responses to the same prompt: the A2A executor withholds every author
-# but the synthesizer, so only that path shows what an A2UI client is handed.
+# but the synthesizer, so only that path shows what an A2A client is handed.
 #
 # The agent must already be serving (see README section 2). Grading reads the
 # newest trace file, so a failed inference would otherwise be graded against the

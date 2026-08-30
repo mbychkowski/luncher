@@ -1,11 +1,10 @@
-# Graders for traces captured over A2A (`05-run-evals.sh luncher --a2a`), which
-# is the path A2UI clients such as Gemini Enterprise use. The executor withholds
-# every author but the synthesizer there, so what reaches the caller differs from
-# the ADK REST response eval_config.yaml grades.
+# Graders for traces captured over A2A (`05-run-evals.sh luncher --a2a`).
+# The executor withholds every author but the synthesizer there, so what
+# reaches the caller differs from the ADK REST response eval_config.yaml grades.
 
 metrics_to_run:
   - single_voice
-  - a2ui_payload_valid
+  - custom_response_quality
 
 custom_metrics:
   # Deterministic. Each author's answer arrives as its own text part, so more
@@ -13,8 +12,6 @@ custom_metrics:
   - name: single_voice
     custom_function_file: single_voice.py
 
-  # Deterministic. Over A2A the surface is a data part rather than the
-  # <a2ui-json> text the dev UI renders, so this also proves the conversion at
-  # the A2A boundary, not just that the agent emitted something.
-  - name: a2ui_payload_valid
-    custom_function_file: a2ui_validity.py
+  # Local LLM-as-judge
+  - name: custom_response_quality
+    custom_function_file: response_quality.py

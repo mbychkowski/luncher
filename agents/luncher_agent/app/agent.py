@@ -14,19 +14,25 @@
 
 import logging
 import os
+from typing import Any, Literal
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
-
 import httpx
-
-from google.adk.agents import Agent, ParallelAgent, SequentialAgent
-from google.adk.agents.remote_a2a_agent import RemoteA2aAgent
-from google.adk.apps.app import App
-from google.adk.models.google_llm import Gemini
+from google import genai
+from google.genai import types
 from google.genai.types import (
     HttpRetryOptions,
     ThinkingConfig,
     ThinkingLevel,
 )
+
+from google.adk.agents import Agent
+from google.adk.agents.context import Context
+from google.adk.agents.remote_a2a_agent import RemoteA2aAgent
+from google.adk.apps.app import App
+from google.adk.events.event import Event
+from google.adk.models.google_llm import Gemini
+from google.adk.workflow import JoinNode, Workflow, node
 
 from .app_utils.genai_transport import GenaiApiTransport
 from .proposal_builder import (
@@ -212,16 +218,72 @@ default_retry_policy = HttpRetryOptions(
     http_status_codes=[429, 500, 503],
 )
 
-# Stage 1 (Parallel): Gather corporate strategy and scheduling options concurrently
-parallel_sub_agents = ParallelAgent(
-    name="parallel_info_gatherer",
-    description="Gathers corporate strategy context and team availability concurrently.",
-    sub_agents=[strategy_agent, scheduling_agent],
-)
+class IntentClassification(BaseModel):
+    intent: Literal["plan", "book"] = Field(
+        description="The classified intent: 'plan' for planning/finding lunch times, 'book' for selecting/booking a specific slot."
+    )
 
-# Stage 2: synthesize into a structured Markdown lunch proposal. The model
-# calls `format_lunch_proposal` with domain data and Python validates and formats
-# the proposal (app/proposal_builder.py).
+
+def _extract_text_from_input(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if hasattr(content, "parts") and content.parts:
+        return " ".join(
+            part.text for part in content.parts if getattr(part, "text", None)
+        )
+    if isinstance(content, dict):
+        return str(content)
+    return str(content) if content is not None else ""
+
+
+@node(name="intent_router")
+async def intent_router(ctx: Context, node_input: Any) -> Event:
+    """Routes user messages between the planning and booking branches."""
+    user_prompt = _extract_text_from_input(node_input)
+    if not user_prompt.strip():
+        return Event(output=node_input, route="plan")
+
+    try:
+        client = genai.Client()
+        response = await client.aio.models.generate_content(
+            model=MODEL,
+            contents=user_prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=(
+                    "You are an intent router for a team lunch coordination system. "
+                    "Classify the user message into one of two intents:\n"
+                    "- 'plan': The user wants to plan, schedule, coordinate, or find options for a team lunch.\n"
+                    "- 'book': The user wants to select, confirm, or book a specific slot or proposal.\n"
+                    "Default to 'plan' if ambiguous or general chat."
+                ),
+                response_mime_type="application/json",
+                response_schema=IntentClassification,
+            ),
+        )
+        parsed = IntentClassification.model_validate_json(response.text)
+        route = parsed.intent
+    except Exception as e:
+        logger.warning("Intent router LLM failed, defaulting to 'plan': %s", e)
+        lower = user_prompt.lower().strip()
+        if lower.startswith(("book", "confirm", "reserve", "choose", "select")):
+            route = "book"
+        else:
+            route = "plan"
+
+    return Event(output=node_input, route=route)
+
+
+@node(name="booking_handler", rerun_on_resume=True)
+async def booking_handler(ctx: Context, node_input: Any) -> Any:
+    """Delegates booking and selection turns directly to scheduling_agent."""
+    return await ctx.run_node(
+        scheduling_agent,
+        node_input=node_input,
+        use_as_output=True,
+    )
+
+
+# Proposal Synthesizer: synthesize corporate strategy and schedule into a structured Markdown proposal
 synthesizer_agent = Agent(
     model=Gemini(
         model=MODEL,
@@ -238,11 +300,24 @@ synthesizer_agent = Agent(
     tools=[format_lunch_proposal_tool],
 )
 
-# Root Orchestrator: 2-stage workflow executing parallel information gathering then synthesis
-luncher_agent = SequentialAgent(
+join_info_gatherer = JoinNode(name="join_info_gatherer")
+
+# Root Orchestrator: ADK 2.0 Workflow coordinating intent routing, parallel data gathering, and booking
+luncher_agent = Workflow(
     name="luncher_agent",
     description="The centralized Luncher Orchestrator that coordinates strategy-aligned team lunch meetings.",
-    sub_agents=[parallel_sub_agents, synthesizer_agent],
+    edges=[
+        ("START", intent_router),
+        (
+            intent_router,
+            {
+                "plan": (strategy_agent, scheduling_agent),
+                "book": booking_handler,
+            },
+        ),
+        ((strategy_agent, scheduling_agent), join_info_gatherer),
+        (join_info_gatherer, synthesizer_agent),
+    ],
 )
 
 root_agent = luncher_agent

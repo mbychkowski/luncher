@@ -29,11 +29,9 @@ from google.genai.types import (
 )
 
 from .app_utils.genai_transport import GenaiApiTransport
-from .a2ui_builder import ROLE_DESCRIPTION as SYNTHESIZER_INSTRUCTION
-from .a2ui_builder import (
-    A2uiHistoryPlugin,
-    a2ui_emit_callback,
-    propose_lunch_tool,
+from .proposal_builder import (
+    ROLE_DESCRIPTION as SYNTHESIZER_INSTRUCTION,
+    format_lunch_proposal_tool,
 )
 
 # Defaults to Python's own unset level. LOG_LEVEL=INFO adds the per-event A2A
@@ -221,9 +219,9 @@ parallel_sub_agents = ParallelAgent(
     sub_agents=[strategy_agent, scheduling_agent],
 )
 
-# Stage 2: synthesize into a lunch proposal, rendered as A2UI v0.8. The model
-# calls `propose_lunch` with domain data and Python builds the surface
-# (app/a2ui_builder.py), so the tree is valid by construction.
+# Stage 2: synthesize into a structured Markdown lunch proposal. The model
+# calls `format_lunch_proposal` with domain data and Python validates and formats
+# the proposal (app/proposal_builder.py).
 synthesizer_agent = Agent(
     model=Gemini(
         model=MODEL,
@@ -237,8 +235,7 @@ synthesizer_agent = Agent(
     name="lunch_synthesizer",
     description="Synthesizes corporate strategy objectives and scheduling options into a team lunch proposal.",
     instruction=SYNTHESIZER_INSTRUCTION,
-    tools=[propose_lunch_tool],
-    after_model_callback=a2ui_emit_callback,
+    tools=[format_lunch_proposal_tool],
 )
 
 # Root Orchestrator: 2-stage workflow executing parallel information gathering then synthesis
@@ -253,9 +250,6 @@ root_agent = luncher_agent
 app = App(
     name="luncher_agent",
     root_agent=root_agent,
-    # App-wide, not synthesizer-only: every agent in the app is handed the same
-    # conversation history, so sub-agents would otherwise carry the surface too.
-    plugins=[A2uiHistoryPlugin()],
 )
 
 

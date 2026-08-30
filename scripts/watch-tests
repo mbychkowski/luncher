@@ -3,7 +3,7 @@
 #
 #   ./scripts/watch-tests                 # luncher_agent (default)
 #   ./scripts/watch-tests sched_agent
-#   ./scripts/watch-tests luncher_agent tests/unit/test_a2ui_builder.py
+#   ./scripts/watch-tests luncher_agent tests/unit/test_proposal_builder.py
 #
 # Uses watchfiles' CLI, which is a declared dependency of each agent, so there is
 # nothing extra to install. Watches only app/ and tests/ -- pointing it at the

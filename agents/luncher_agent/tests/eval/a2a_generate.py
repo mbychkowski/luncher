@@ -104,10 +104,9 @@ def _prompts_of(case: dict) -> list[str]:
 def _score(cases: list[dict]) -> None:
     """Applies the metrics from eval_config_a2a.yaml and prints a summary."""
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    import a2ui_validity
     import single_voice
 
-    metrics = {"single_voice": single_voice, "a2ui_payload_valid": a2ui_validity}
+    metrics = {"single_voice": single_voice}
     print("\n== scores ==")
     totals: dict[str, list[float]] = {name: [] for name in metrics}
     for case in cases:

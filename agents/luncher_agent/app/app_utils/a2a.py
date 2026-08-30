@@ -58,89 +58,6 @@ _ADK_AGENT_EXECUTOR_EXTENSION_URI = (
 
 logger = logging.getLogger(__name__)
 
-# A2UI spec version. Gemini Enterprise supports v0.8 only.
-_A2UI_VERSION = "0.8"
-
-
-def _a2ui_extension() -> AgentExtension | None:
-    """Returns the A2UI extension for the agent card, or None if unavailable.
-
-    Advertising this is what makes the agent eligible for A2UI rendering when
-    registered with Gemini Enterprise via ``a2aAgentDefinition``. Returns None
-    when ``a2ui-agent-sdk`` is not installed, so this module stays drop-in for
-    agents that do not render UI.
-    """
-    try:
-        from a2ui.a2a.extension import get_a2ui_agent_extension
-        from a2ui.basic_catalog.provider import BasicCatalog
-        from a2ui.inference_formats.direct_json import DirectJsonFormat
-    except ImportError as e:
-        # Absent SDK is the supported no-UI case; a *present* but unimportable one
-        # is a breakage that would otherwise surface only as a blank reply.
-        logger.warning("A2UI not advertised on the agent card: %s", e)
-        return None
-
-    a2ui_format = DirectJsonFormat(
-        version=_A2UI_VERSION,
-        catalogs=[BasicCatalog.get_config(version=_A2UI_VERSION)],
-    )
-    return get_a2ui_agent_extension(
-        _A2UI_VERSION,
-        a2ui_format.accepts_inline_catalogs,
-        a2ui_format.supported_catalog_ids,
-    )
-
-
-def _build_executor(runner: Runner, agent_card):
-    """Returns the A2A executor, activating A2UI when a client asks for it.
-
-    The card advertises the extension; A2A still negotiates per request. Unless
-    the server activates it the SDK omits the ``X-A2A-Extensions`` echo, and the
-    client discards the A2UI parts -- a blank reply, not an error. ADK's executor
-    has no A2UI support, so activation is added here.
-    """
-    config = _executor_config()
-    try:
-        from a2ui.a2a.extension import try_activate_a2ui_extension
-    except ImportError:
-        return A2aAgentExecutor(runner=runner, config=config)
-
-    class _A2uiActivatingExecutor(A2aAgentExecutor):
-        async def execute(self, context, event_queue) -> None:
-            # Selects the newest version the client and card agree on, and is a
-            # no-op when the client asked for nothing -- so a non-A2UI caller is
-            # unaffected.
-            try_activate_a2ui_extension(context, agent_card)
-            await super().execute(context, event_queue)
-
-    return _A2uiActivatingExecutor(runner=runner, config=config)
-
-
-def _executor_config():
-    """Returns the A2A executor config, converting A2UI text into data parts.
-
-    A2A consumers such as Gemini Enterprise need A2UI as ``application/json+a2ui``
-    data parts. The conversion belongs here rather than in the agent's response,
-    because the ADK dev UI renders the ``<a2ui-json>`` tags straight out of the
-    message text and converting earlier would break it. Returns ``None`` (ADK
-    defaults) when the agent does not render A2UI.
-    """
-    try:
-        from ..a2ui import a2ui_gen_ai_part_converter
-    except ImportError as e:
-        logger.warning("A2UI part conversion disabled: %s", e)
-        return None
-
-    # Two converters, because ADK ships two executors and picks between them per
-    # request: a client that negotiates the executor extension -- Gemini
-    # Enterprise does -- gets the newer one and its adk_event_converter. Wrapping
-    # only the legacy converter filters curl and leaves the real client untouched.
-    return A2aAgentExecutorConfig(
-        gen_ai_part_converter=a2ui_gen_ai_part_converter,
-        event_converter=_only_synthesizer_speaks(convert_event_to_a2a_events),
-        adk_event_converter=_only_synthesizer_speaks(convert_event_to_a2a_events_impl),
-    )
-
 
 # The agent that addresses the user. Every other agent in the pipeline gathers
 # material for it.
@@ -180,6 +97,15 @@ def _only_synthesizer_speaks(convert):
     return convert_from_one_voice
 
 
+def _build_executor(runner: Runner, agent_card):
+    """Returns the A2A executor configured with single-voice event conversion."""
+    config = A2aAgentExecutorConfig(
+        event_converter=_only_synthesizer_speaks(convert_event_to_a2a_events),
+        adk_event_converter=_only_synthesizer_speaks(convert_event_to_a2a_events_impl),
+    )
+    return A2aAgentExecutor(runner=runner, config=config)
+
+
 def _default_capabilities() -> AgentCapabilities:
     """Returns the default A2A capabilities used by scaffolded projects.
 
@@ -195,9 +121,6 @@ def _default_capabilities() -> AgentCapabilities:
             description=("Ability to use the new agent executor implementation"),
         ),
     ]
-    if (a2ui_extension := _a2ui_extension()) is not None:
-        extensions.append(a2ui_extension)
-
     return AgentCapabilities(streaming=True, extensions=extensions)
 
 

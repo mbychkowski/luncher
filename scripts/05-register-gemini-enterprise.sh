@@ -202,7 +202,7 @@ CARD=$(curl -sS -f -H "Authorization: Bearer ${CARD_TOKEN}" "$CARD_URL") || {
   exit 1
 }
 
-# Fail loudly rather than registering a card that cannot render A2UI.
+# Validate basic card structure
 python3 - "$CARD" <<'PY'
 import json, sys
 
@@ -216,12 +216,6 @@ if missing:
     sys.exit(f"Error: agent card is missing required fields: {', '.join(missing)}")
 
 extensions = (card.get("capabilities") or {}).get("extensions") or []
-if not any("a2ui" in (ext.get("uri") or "") for ext in extensions):
-    sys.exit(
-        "Error: the agent card does not declare the A2UI extension, so Gemini "
-        "Enterprise will not render its surfaces."
-    )
-
 print(f"  ok: {card['name']} v{card['version']}, protocol {card['protocolVersion']}")
 print(f"  url: {card['url']}")
 for ext in extensions:

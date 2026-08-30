@@ -1,16 +1,10 @@
-"""Deterministic metric for `a2ui_tool_called` (see eval_config.yaml).
+"""Deterministic metric for proposal tool invocation (see eval_config.yaml).
 
-The synthesizer must render its proposal by calling `propose_lunch` exactly once.
-Two real failure modes this catches:
-
-* the model describes the proposal in prose and never calls the tool, so nothing
-  renders;
-* it calls the tool more than once, emitting duplicate surfaces.
-
+The synthesizer must format its proposal by calling `format_lunch_proposal` exactly once.
 Deterministic -- it walks the recorded trace rather than asking a model.
 """
 
-TOOL_NAME = "propose_lunch"
+TOOL_NAME = "format_lunch_proposal"
 
 
 def _iter_function_calls(agent_data):
@@ -34,11 +28,11 @@ def evaluate(instance):
         return {
             "score": 0,
             "explanation": (
-                f"{TOOL_NAME} was never called, so no surface was rendered."
+                f"{TOOL_NAME} was never called, so no proposal was formatted."
                 f" Calls seen: {names or 'none'}."
             ),
         }
     return {
         "score": 0,
-        "explanation": f"{TOOL_NAME} called {count} times; duplicate surfaces. Calls: {names}.",
+        "explanation": f"{TOOL_NAME} called {count} times; duplicate calls. Calls: {names}.",
     }

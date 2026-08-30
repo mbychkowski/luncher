@@ -57,7 +57,7 @@
           "role": "model",
           "parts": [
             {
-              "text": "A proposal with exactly one time slot offered and recommended; the picker must still render correctly with a single option."
+              "text": "A proposal with exactly one time slot offered and recommended; the proposal must format correctly with a single option."
             }
           ]
         }

@@ -6,6 +6,7 @@ These rules govern how Antigravity executes and maintains tests across this repo
 
 ## 1. Automatic Test Execution: Unit Tests ONLY
 
+- **Strict Test Directory Scope:** Whenever tests are run, Antigravity ONLY needs to find and execute tests located within `agents/` (`agents/*`). Do not search for or run tests in other directories.
 - **Strict Unit Test Scope:** Antigravity MUST ONLY run unit tests (`tests/unit/`) automatically.
 - **Trigger Conditions for Unit Tests:**
   - Automatically after completing code modifications or refactors to verify implementation correctness.

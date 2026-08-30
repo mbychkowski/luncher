@@ -120,19 +120,12 @@ uv --directory agents/luncher_agent run agents-cli deploy \
 > SCHED_ENGINE_ID="1234567890123456789"
 > ```
 
-### Step 6: Deploy the Catering Agent (`cater_agent`) to Agent Runtime
+### Step 6: Manual testing of deployed agents
+Test the orchestrator agent (which will also invoke the other agents):
 
-> **NOTE**
->
-> We will come back to `cater_agent` and build it up from scratch following [`cater_agent.md`](cater_agent.md) before executing this step
-
-```bash
-uv --directory agents/cater_agent run agents-cli deploy \
-  --project "$GOOGLE_CLOUD_PROJECT_ID" \
-  --region "$GOOGLE_CLOUD_LOCATION" \
-  --agent-identity \
-  --update-env-vars "$BASE_ENV,BIGQUERY_LOCATION=${BIGQUERY_LOCATION}"
-```
+- visit [Deployments on Agent Runtime](https://console.cloud.google.com/agent-platform/runtimes) and navigate to "luncher-agent"
+- Click "Playground"
+- enter a prompt like `Schedule a lunch meeting for Monday`
 
 ---
 

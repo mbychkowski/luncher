@@ -4,10 +4,10 @@ This is your task, with help from Antigravity. Build an agent that provides lunc
 
 ## Prerequisites
 
-Ensure that you have the [`agents-cli` skills](https://github.com/google/agents-cli) installed in Antigravity.
+Ensure that you have the [`agents-cli` skills](https://github.com/google/agents-cli) and workspace plugins installed in Antigravity.
 
-* **Antigravity 2.0:** Go to _Settings > Customizations_ and confirm that several `google-agents-cli-*` skills are listed
-* **Antigravity CLI:** At the prompt, enter `/skills` and confirm that several `google-agents-cli-*` skills are listed
+* **Antigravity 2.0:** Go to _Settings > Customizations_ and confirm that several `google-agents-cli-*` skills and the `eval-viewer` plugin are listed.
+* **Antigravity CLI:** At the prompt, enter `/skills` and confirm that `google-agents-cli-*` and `eval-viewer` skills are listed.
 
 ## Step 1. Create the agent
 
@@ -49,7 +49,34 @@ Visit http://localhost:8080/dev-ui/?app=app and enter a prompt, like `plan a lun
 
 Enter the following prompt to deploy the new agent, and deploy updates to existing agents:
 ```
-Deploy all agents to Agent Platform's Agent Runtime.
+Deploy all agents to Agent Platform's Agent Runtime with telemetry and prompt/response logging enabled.
+```
+
+Alternatively, you can run the deployment commands directly:
+
+```bash
+source .env
+
+BASE_ENV="GOOGLE_GENAI_MODEL=${GOOGLE_GENAI_MODEL},GOOGLE_GENAI_LOCATION=${GOOGLE_GENAI_LOCATION},GOOGLE_CLOUD_PROJECT_ID=${GOOGLE_CLOUD_PROJECT_ID},GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION}"
+AGENT_SETTINGS_ENV="GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY=true,OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=EVENT_ONLY"
+
+# 1. Deploy cater_agent to Agent Runtime
+uv --directory agents/cater_agent run agents-cli deploy \
+  --project "$GOOGLE_CLOUD_PROJECT_ID" \
+  --region "$GOOGLE_CLOUD_LOCATION" \
+  --agent-identity \
+  --update-env-vars "$BASE_ENV,$AGENT_SETTINGS_ENV,BIGQUERY_LOCATION=${BIGQUERY_LOCATION}"
+
+# 2. Extract engine IDs and redeploy luncher_agent with all 3 sub-agents
+STRAT_ENGINE_ID=$(jq -r '.remote_agent_runtime_id | split("/") | last' agents/strat_agent/deployment_metadata.json 2>/dev/null || echo "")
+SCHED_ENGINE_ID=$(jq -r '.remote_agent_runtime_id | split("/") | last' agents/sched_agent/deployment_metadata.json 2>/dev/null || echo "")
+CATER_ENGINE_ID=$(jq -r '.remote_agent_runtime_id | split("/") | last' agents/cater_agent/deployment_metadata.json 2>/dev/null || echo "")
+
+uv --directory agents/luncher_agent run agents-cli deploy \
+  --project "$GOOGLE_CLOUD_PROJECT_ID" \
+  --region "$GOOGLE_CLOUD_LOCATION" \
+  --agent-identity \
+  --update-env-vars "$BASE_ENV,$AGENT_SETTINGS_ENV${STRAT_ENGINE_ID:+,STRATEGY_AGENT_ENGINE_ID=$STRAT_ENGINE_ID}${SCHED_ENGINE_ID:+,SCHEDULING_AGENT_ENGINE_ID=$SCHED_ENGINE_ID}${CATER_ENGINE_ID:+,CATERING_AGENT_ENGINE_ID=$CATER_ENGINE_ID}"
 ```
 
 ### 2.2. Validate deployed agent
@@ -86,10 +113,20 @@ When the implementation is complete, visit http://localhost:8080/dev-ui/?app=lun
 
 ### 3.4. Redeploy
 
-Run the following to redeploy the modify agents:
+Run the following to redeploy the modified agents:
 
 ```
-Redeploy the agents which have changed.
+Redeploy the agents which have changed with telemetry and prompt/response logging enabled.
+```
+
+Alternatively, you can run the deployment command directly:
+
+```bash
+uv --directory agents/cater_agent run agents-cli deploy \
+  --project "$GOOGLE_CLOUD_PROJECT_ID" \
+  --region "$GOOGLE_CLOUD_LOCATION" \
+  --agent-identity \
+  --update-env-vars "$BASE_ENV,$AGENT_SETTINGS_ENV,BIGQUERY_LOCATION=${BIGQUERY_LOCATION}"
 ```
 
 ### 3.5. Validate local agent
@@ -122,10 +159,20 @@ When the implementation is complete, visit http://localhost:8080/dev-ui/?app=app
 
 ### 4.3. Redeploy
 
-Run the following to redeploy the modify agents:
+Run the following to redeploy the modified agents:
 
 ```
-Redeploy the agents which have changed.
+Redeploy the agents which have changed with telemetry and prompt/response logging enabled.
+```
+
+Alternatively, you can run the deployment command directly:
+
+```bash
+uv --directory agents/cater_agent run agents-cli deploy \
+  --project "$GOOGLE_CLOUD_PROJECT_ID" \
+  --region "$GOOGLE_CLOUD_LOCATION" \
+  --agent-identity \
+  --update-env-vars "$BASE_ENV,$AGENT_SETTINGS_ENV,BIGQUERY_LOCATION=${BIGQUERY_LOCATION}"
 ```
 
 ### 4.4. Validate deployed agent
@@ -134,7 +181,7 @@ When all deployments have completed, visit the deployed `luncher_agent` on Agent
 
 ## Step 5. Add evaluations
 
-Validate `cater_agent` using the `agents-cli eval` framework to test that it reliably generates themed menus, adheres to dietary constraints, and records memory preferences.
+Validate `cater_agent` using the `agents-cli eval` framework to test that it reliably generates themed menus, adheres to dietary constraints, and records memory preferences. This supports local developer iteration, regression testing, and cloud monitoring on Gemini Enterprise Agent Platform (GEAP).
 
 ### 5.1. Evaluation scaffolding
 
@@ -149,53 +196,143 @@ In `agents/cater_agent/tests/eval`, create an evaluation suite using the `agents
    - Preference memory storage: Storing dietary preferences when prompted (e.g., allergies or restrictions) rather than attempting to schedule a meeting.
 
 2. Create `tests/eval/eval_config.yaml` specifying:
-   - `custom_response_quality`: Local LLM-as-judge evaluating accuracy, formatting, and menu completeness on a 1-5 scale.
+   - `final_response_quality`: Built-in LLM-as-judge evaluating accuracy, formatting, and menu completeness.
+   - `hallucination`: Built-in metric verifying all response facts are grounded in retrieved data.
    - `dietary_filtering`: Custom metric validating that all returned menus strictly adhere to requested dietary and allergen restrictions.
    - `agent_turn_count`: Turn counting metric.
 
-3. Implement custom evaluator functions in `tests/eval/response_quality.py` and `tests/eval/dietary_filtering.py`.
+3. Implement custom evaluator function in `tests/eval/dietary_filtering.py`.
 ```
 
-### 5.2. Run evaluations locally
+### 5.2. Local developer loop
 
-Make sure `cater_agent` is running locally (port 8083), then run the evaluation script from the repository root:
+ During local development, quickly generate execution traces against your running agent and score them against your evaluation configuration.
 
-```bash
-./scripts/06-run-evals.sh cater
-```
+ #### 5.2.1. Launch the evaluation dashboard sidecar (optional)
 
-You can also run evaluation inference and grading directly with `agents-cli`:
+ The workspace includes an Antigravity sidecar plugin in `.agents/plugins/eval-viewer` that serves an interactive HTML dashboard and scorecard viewer on port **8088**.
 
-```bash
-# Generate traces from the local catering agent
-uv --directory agents/cater_agent run agents-cli eval generate \
-  --dataset tests/eval/datasets/catering-dataset.json \
-  --url http://localhost:8083 \
-  --app-name cater_agent
+ You can prompt Antigravity to start the sidecar:
 
-# Grade the generated traces against eval_config.yaml
-uv --directory agents/cater_agent run agents-cli eval grade \
-  --traces agents/cater_agent/artifacts/traces/ \
-  --config tests/eval/eval_config.yaml
-```
+ ```
+ Start the eval-viewer sidecar server.
+ ```
+
+ #### 5.2.2. Run evaluation traces and grading
+
+ You can prompt Antigravity to run the local evaluation flow:
+
+ ```
+ Run the eval suite for cater_agent:
+ 1. Ensure the local cater_agent server is running on port 8083 (with local in-memory state).
+ 2. Run `agents-cli eval generate` against http://localhost:8083 using `tests/eval/datasets/catering-dataset.json` and `--app-name app`.
+ 3. Grade the latest trace using `tests/eval/eval_config.yaml`.
+ 4. Output the score summary table and link to the grade results.
+ ```
+
+ Alternatively, you can execute `agents-cli` commands directly:
+
+ ```bash
+ # Generate traces from the local catering agent
+ uv --directory agents/cater_agent run agents-cli eval generate \
+   --dataset tests/eval/datasets/catering-dataset.json \
+   --url http://localhost:8083 \
+   --app-name app
+
+ # Grade the generated traces against eval_config.yaml
+ uv --directory agents/cater_agent run agents-cli eval grade \
+   --traces artifacts/traces/ \
+   --config tests/eval/eval_config.yaml
+ ```
 
 ### 5.3. Analyze evaluation results and iterate (Quality Flywheel)
 
+Review grade results to diagnose failures, adjust instructions or tools, and compare runs against your baseline to ensure scores improve without regressions.
+
+You can prompt Antigravity to find the best baseline, analyze the latest results, and iterate on fixes:
+
+```
+Analyze the latest eval results for cater_agent against our baseline:
+1. Identify our best evaluation baseline (`tests/eval/baselines/baseline_results.json` or highest scoring historical run) and the latest evaluation result in `agents/cater_agent/artifacts/grade_results/`.
+2. Compare the candidate run against the baseline using `agents-cli eval compare`.
+3. If any evaluation case failed or regressed:
+   - Identify the root cause from the judge rationales and trace data.
+   - Propose and apply fixes to `cater_agent` instructions or tool logic.
+   - Re-run evaluation and verify scores meet or exceed the baseline.
+4. Show the final scorecard and comparison summary.
+```
+
+Or manually inspect and compare runs:
+
 1. **Review Grade Results:**
-   Open the generated HTML report in your browser (e.g., `agents/cater_agent/artifacts/grade_results/results_<timestamp>.html`) to inspect scores, judge explanations, and individual case traces.
+   Visit the local evaluation dashboard at **http://localhost:8088** (or open the generated HTML report in `agents/cater_agent/artifacts/grade_results/results_<timestamp>.html`) to inspect scorecards, judge explanations, and individual case traces.
 
 2. **Diagnose and Fix Failures:**
-   - **Low `dietary_filtering` score:** If excluded allergens or non-compliant foods appear in suggestions, adjust the system instructions in `app/agent.py` or enhance SQL query and memory filtering logic in `app/tools.py`.
-   - **Low `custom_response_quality` score:** If menus lack 4 courses or miss thematic consistency, clarify the instruction prompt in `app/agent.py`.
+   - **Low `dietary_filtering` score:** If excluded allergens appear in suggestions, adjust the system instructions in `app/agent.py` or enhance SQL query and memory filtering logic in `app/tools.py`.
+   - **Low `final_response_quality` or `hallucination` score:** If menus lack 4 courses, miss thematic consistency, or mention items not in database results, clarify the prompt in `app/agent.py`.
 
-3. **Compare Results Across Iterations:**
-   After making adjustments to instructions or tool implementations, rerun evaluation and compare the results to ensure scores improved without regressions:
+3. **Compare Results Against Baseline:**
+   Set the certified baseline and latest results paths into environment variables, then run `eval compare`:
 
    ```bash
+   # 1. Set the certified baseline
+   export EVAL_BASELINE="tests/eval/baselines/baseline_results.json"
+
+   # 2. Automatically select the latest evaluation run
+   export EVAL_NEW=$(ls -t agents/cater_agent/artifacts/grade_results/results_*.json | head -n 1 | sed 's|agents/cater_agent/||')
+
+   # 3. Compare candidate run against the baseline
    uv --directory agents/cater_agent run agents-cli eval compare \
-     agents/cater_agent/artifacts/grade_results/results_<baseline>.json \
-     agents/cater_agent/artifacts/grade_results/results_<new>.json
+     "$EVAL_BASELINE" \
+     "$EVAL_NEW"
    ```
+
+> **Note (CI/CD Quality Gate):** If you were to implement this in a CI/CD pipeline (such as GitHub Actions or Cloud Build), you could run `eval grade` and `eval compare "$EVAL_BASELINE" "$EVAL_NEW"` automatically to block regressions before merging pull requests to the `main` branch.
+
+### 5.4. Cloud evaluation and monitoring on Gemini Enterprise Agent Platform (GEAP)
+
+For deployed agents on Agent Runtime, you can run server-side evaluations and track performance dashboards directly in Google Cloud.
+
+#### 5.4.1. Push server-side evaluation to GEAP (`eval submit`)
+
+Submit an evaluation dataset directly to the Agent Platform Evaluation Service to run against your deployed Reasoning Engine or Cloud Run endpoint.
+
+You can prompt Antigravity to submit and track the cloud evaluation:
+
+```
+Submit a cloud evaluation for deployed cater_agent:
+1. Locate the deployed cater_agent Reasoning Engine resource name in GCP (project `$GOOGLE_CLOUD_PROJECT_ID`, location `$GOOGLE_CLOUD_LOCATION`).
+2. Ensure the destination Cloud Storage bucket `gs://${GOOGLE_CLOUD_PROJECT_ID}-eval-results` exists.
+3. Submit `tests/eval/datasets/catering-dataset.json` using `agents-cli eval submit` to run server-side evaluation against the deployed agent.
+4. Retrieve and report the evaluation run ID and link to the Google Cloud Console evaluation dashboard.
+```
+
+Alternatively, you can execute the commands directly:
+
+```bash
+# 1. Export variables and ensure the destination bucket exists
+source .env
+export CATER_AGENT_REASONING_ENGINE_ID="<your-reasoning-engine-id>"
+gcloud storage buckets create "gs://${GOOGLE_CLOUD_PROJECT_ID}-eval-results" \
+  --project="${GOOGLE_CLOUD_PROJECT_ID}" \
+  --location="${GOOGLE_CLOUD_LOCATION}" \
+  --continue-on-error
+
+# 2. Submit cloud-side evaluation run
+uv --directory agents/cater_agent run agents-cli eval submit \
+  --dataset tests/eval/datasets/catering-dataset.json \
+  --resource-name "projects/${GOOGLE_CLOUD_PROJECT_ID}/locations/${GOOGLE_CLOUD_LOCATION}/reasoningEngines/${CATER_AGENT_REASONING_ENGINE_ID}" \
+  --dest "gs://${GOOGLE_CLOUD_PROJECT_ID}-eval-results/"
+
+# 3. Poll and view results from the cloud run
+uv --directory agents/cater_agent run agents-cli eval results --run-id <run-resource-name>
+```
+
+#### 5.4.2. View in Google Cloud Console
+
+1. Navigate to the **Google Cloud Console > Vertex AI > Agent Platform** (or **Vertex AI > Evaluation**).
+2. Select **Evaluation Runs** to view radar charts, pass rates, score distributions, and judge rationales for each deployed agent version.
+3. In **BigQuery / Cloud Trace**, inspect live conversation traces from production traffic and export failing interactions to synthesize new evaluation cases with `agents-cli eval dataset synthesize`.
 
 ## Step 6. (optional). Learn from experience
 

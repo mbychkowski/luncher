@@ -102,7 +102,7 @@ def test_adk_run_sse(server_fixture: subprocess.Popen[str]) -> None:
     session_data = {"state": {"preferred_language": "English", "visit_count": 1}}
 
     session_response = requests.post(
-        f"{BASE_URL}/apps/luncher_agent/users/{user_id}/sessions",
+        f"{BASE_URL}/apps/app/users/{user_id}/sessions",
         headers=HEADERS,
         json=session_data,
         timeout=60,
@@ -111,7 +111,7 @@ def test_adk_run_sse(server_fixture: subprocess.Popen[str]) -> None:
     session_id = session_response.json()["id"]
 
     data = {
-        "appName": "luncher_agent",
+        "appName": "app",
         "userId": user_id,
         "sessionId": session_id,
         "newMessage": {"role": "user", "parts": [{"text": "Hi!"}]},

@@ -114,69 +114,11 @@ All required Agent Gateway and Agent Registry permissions for the **Agent Runtim
 
 ---
 
-## Step 5: Wire Egress Gateway Routing on All Agents
+## Step 5: Route Gemini Enterprise App Egress through Agent Gateway
 
-### Method A: Antigravity Guided Flow (`AGY Prompt`) *(Preferred)*
+To bind the Gemini Enterprise application to route all outbound queries through `luncher-gateway` (applying Model Armor inspection and Agent Registry governance to every user conversation):
 
-```text
-Configure Egress Agent Gateway routing on all deployed agents:
-1. Identify the Egress Agent Gateway:
-   - Egress (AGENT_TO_ANYWHERE): `projects/${GOOGLE_CLOUD_PROJECT_ID}/locations/${GOOGLE_CLOUD_LOCATION}/agentGateways/luncher-gateway`
-2. For each agent (`luncher_agent`, `strat_agent`, `sched_agent`, `cater_agent`), read its `remote_agent_runtime_id` from `deployment_metadata.json`.
-3. Patch each reasoning engine's `spec.deploymentSpec.agentGatewayConfig` with:
-   - `agentToAnywhereConfig.agentGateway` pointing to `luncher-gateway`
-4. Ensure environment variable `GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES=false` is configured for Context-Aware Access (CAA) token sharing.
-5. Verify all agents report active egress gateway bindings.
-```
-
----
-
-### Method B: Direct REST API (`curl`)
-
-```bash
-source .env
-TOKEN=$(gcloud auth print-access-token)
-EGRESS_GW="projects/${GOOGLE_CLOUD_PROJECT_ID}/locations/${GOOGLE_CLOUD_LOCATION}/agentGateways/luncher-gateway"
-
-for AGENT_NAME in luncher_agent strat_agent sched_agent cater_agent; do
-  META_FILE="agents/${AGENT_NAME}/deployment_metadata.json"
-  if [ -f "$META_FILE" ]; then
-    ENGINE_ID=$(jq -r '.remote_agent_runtime_id | split("/") | last' "$META_FILE")
-    echo "🔗 Configuring Egress Gateway for ${AGENT_NAME} (${ENGINE_ID})..."
-
-    CURRENT_SPEC=$(curl -s -X GET \
-      -H "Authorization: Bearer ${TOKEN}" \
-      "https://${GOOGLE_CLOUD_LOCATION}-aiplatform.googleapis.com/v1/projects/${GOOGLE_CLOUD_PROJECT_ID}/locations/${GOOGLE_CLOUD_LOCATION}/reasoningEngines/${ENGINE_ID}")
-
-    NEW_ENV=$(echo "$CURRENT_SPEC" | jq '.spec.deploymentSpec.env | map(select(.name != "GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES")) + [{"name": "GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES", "value": "false"}]')
-
-    curl -s -X PATCH \
-      -H "Authorization: Bearer ${TOKEN}" \
-      -H "Content-Type: application/json; charset=utf-8" \
-      -d "{
-        \"spec\": {
-          \"deploymentSpec\": {
-            \"agentGatewayConfig\": {
-              \"agentToAnywhereConfig\": {
-                \"agentGateway\": \"${EGRESS_GW}\"
-              }
-            },
-            \"env\": ${NEW_ENV}
-          }
-        }
-      }" \
-      "https://${GOOGLE_CLOUD_LOCATION}-aiplatform.googleapis.com/v1/projects/${GOOGLE_CLOUD_PROJECT_ID}/locations/${GOOGLE_CLOUD_LOCATION}/reasoningEngines/${ENGINE_ID}?updateMask=spec.deploymentSpec.agentGatewayConfig,spec.deploymentSpec.env"
-  fi
-done
-```
-
----
-
-### 5.2 Route Gemini Enterprise App Egress through Agent Gateway
-
-To bind the Gemini Enterprise application to route all outbound queries through `luncher-gateway`:
-
-#### Option 1: Google Cloud Console (Recommended & Simplest)
+### Option 1: Google Cloud Console (Recommended & Simplest)
 
 1. Open the [Gemini Enterprise Apps Console](https://console.cloud.google.com/gemini-enterprise/apps).
 2. Select your application.
@@ -187,7 +129,9 @@ To bind the Gemini Enterprise application to route all outbound queries through 
    ```
 5. Click **Save**.
 
-#### Option 2: Direct REST API (`curl`)
+---
+
+### Option 2: Direct REST API (`curl`)
 
 ```bash
 source .env
@@ -217,7 +161,7 @@ curl -s -X PATCH \
 > [!NOTE]
 > **Automatic Agent Registration**: When agents are deployed to Agent Runtime via `agents-cli deploy`, Google Cloud **automatically registers** them into Agent Registry (`gcloud alpha agent-registry agents list`).
 >
-> **Default Deny Egress Policy**: When `AGENT_TO_ANYWHERE` is active, outbound traffic is blocked by default. All target endpoints (sub-agents, Cloud Trace telemetry, Cloud Logging, and Reasoning Engines base APIs) must be registered in Agent Registry and granted `roles/iap.egressor`.
+> **Default Deny Egress Policy**: When `AGENT_TO_ANYWHERE` is active, outbound traffic is blocked by default. All target endpoints (agents and platform APIs) must be registered in Agent Registry and granted `roles/iap.egressor`.
 
 ---
 
@@ -227,12 +171,18 @@ curl -s -X PATCH \
 Register all deployed agents and essential platform APIs in Agent Registry:
 1. For each deployed agent (`luncher_agent`, `strat_agent`, `sched_agent`, `cater_agent`), read its `remote_agent_runtime_id` from `deployment_metadata.json` and register its service in Agent Registry in `${GOOGLE_CLOUD_LOCATION}` with mTLS JSON-RPC interface.
 2. Register essential Google Cloud platform APIs in Agent Registry:
+   - `aiplatform-re-service` (`https://${GOOGLE_CLOUD_LOCATION}-aiplatform.googleapis.com/`)
+   - `aiplatform-global-service` (`https://aiplatform.googleapis.com/`)
+   - `generativelanguage-service` (`https://generativelanguage.googleapis.com/`)
+   - `bigquery-service` (`https://bigquery.googleapis.com/`)
+   - `storage-service` (`https://storage.googleapis.com/`)
+   - `oauth2-service` (`https://oauth2.googleapis.com/`)
    - `telemetry-service` (`https://telemetry.googleapis.com/`)
    - `logging-service` (`https://logging.googleapis.com/`)
    - `agentregistry-service` (`https://agentregistry.googleapis.com/`)
-   - `aiplatform-re-service` (`https://${GOOGLE_CLOUD_LOCATION}-aiplatform.googleapis.com/`)
 3. Grant `roles/iap.egressor` on all registered services to:
    - Agent Runtime Service Agent (`service-${PROJECT_NUMBER}@gcp-sa-aiplatform-re.iam.gserviceaccount.com`)
+   - Discovery Engine Service Agent (`service-${PROJECT_NUMBER}@gcp-sa-discoveryengine.iam.gserviceaccount.com`)
    - Workload Identity Principal Set (`principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${GOOGLE_CLOUD_PROJECT_ID}.svc.id.goog/*`)
 4. Verify all endpoints are active in Agent Registry.
 ```

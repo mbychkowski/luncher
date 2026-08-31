@@ -47,6 +47,7 @@ for GOOGLE_CLOUD_API in \
   aiplatform.googleapis.com \
   bigquery.googleapis.com \
   apphub.googleapis.com \
+  discoveryengine.googleapis.com \
     ; do
   echo "Enabling ${GOOGLE_CLOUD_API}..."
   gcloud services enable --project "${GOOGLE_CLOUD_PROJECT_ID}" "${GOOGLE_CLOUD_API}"

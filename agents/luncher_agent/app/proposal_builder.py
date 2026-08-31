@@ -83,13 +83,15 @@ def _scheduling_agent_text(tool_context: ToolContext) -> str:
     for event in getattr(session, "events", []) or []:
         if getattr(event, "author", None) != SCHEDULING_AGENT_NAME:
             continue
-        if getattr(event, "invocation_id", None) != getattr(
-            tool_context, "invocation_id", None
-        ):
+        tool_inv_id = getattr(tool_context, "invocation_id", None)
+        event_inv_id = getattr(event, "invocation_id", None)
+        if tool_inv_id and event_inv_id and event_inv_id != tool_inv_id:
             continue
         for part in getattr(getattr(event, "content", None), "parts", None) or []:
             if getattr(part, "text", None):
                 chunks.append(part.text)
+        if getattr(event, "output", None) and isinstance(event.output, str):
+            chunks.append(event.output)
     return "\n".join(chunks)
 
 

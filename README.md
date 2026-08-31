@@ -32,21 +32,25 @@ and Linux).
 
 ## 🏛️ Agent Architecture Diagram
 
-Stage 1 gathers from two sub-agents concurrently: `strategy_agent` and `scheduling_agent`
-are remote A2A peers. Stage 2's `lunch_synthesizer` runs in the orchestrator's own process
-and deterministically formats the structured Markdown proposal.
+The orchestrator executes an ADK 2.0+ `Workflow` graph:
+- **Intent Router**: Classifies the prompt into planning vs booking intents.
+- **Planning Path (Parallel Gathering & Synthesis)**: Concurrently dispatches requests to remote A2A peers `strategy_agent` and `scheduling_agent`, joins their outputs via `JoinNode`, and passes the combined context to `lunch_synthesizer` to deterministically format the structured Markdown proposal.
+- **Booking Path (Direct Delegation)**: Routes selection/confirmation turns directly to `booking_handler` which delegates booking execution to `scheduling_agent`.
 
 ```mermaid
 graph TD
-    User(["👤 User / Client"]) -->|1. Sends Prompt| LuncherProcess
+    User(["👤 User / Client"]) -->|1. Sends Prompt| LuncherWorkflow
 
-    subgraph LuncherProcess ["👑 Luncher Orchestrator (Agent Runtime)"]
-        LuncherSeq["luncher_agent (SequentialAgent)"]
-        ParallelGatherer["parallel_info_gatherer (ParallelAgent)"]
+    subgraph LuncherWorkflow ["👑 Luncher Orchestrator (ADK 2.0 Workflow)"]
+        Router["intent_router<br/>(Gemini Intent Classifier)"]
+        JoinGatherer["join_info_gatherer (JoinNode)"]
         Synthesizer["lunch_synthesizer<br/>format_lunch_proposal → Markdown"]
+        BookingHandler["booking_handler<br/>(Booking Delegation)"]
 
-        LuncherSeq -->|Stage 1| ParallelGatherer
-        LuncherSeq -->|Stage 2| Synthesizer
+        Router -->|Route: plan| StratA2A
+        Router -->|Route: plan| SchedA2A
+        Router -->|Route: book| BookingHandler
+        BookingHandler -->|Delegate| SchedA2A
     end
 
     subgraph StrategyAgent ["🎯 Strategy Agent (Agent Runtime)"]
@@ -69,18 +73,16 @@ graph TD
     BQ[("📊 BigQuery via MCP<br/>catering.menu_items")]
     MemBank[("🧠 Memory Bank")]
 
-    ParallelGatherer -->|2a. A2A HTTP Request| StratA2A
-    ParallelGatherer -->|2b. A2A HTTP Request| SchedA2A
-
     StratTools -->|PDF Document Read| GCS
     SchedTools -->|Catering & Menu Query| BQ
     SchedTools -->|Team bookings<br/>scope: sched_agent / team| MemBank
 
-    StratA2A -->|3a. Strategic Context| ParallelGatherer
-    SchedA2A -->|3b. Availability & Bookings| ParallelGatherer
+    StratA2A -->|Strategic Context| JoinGatherer
+    SchedA2A -->|Availability & Bookings| JoinGatherer
 
-    ParallelGatherer -->|4. Combined Context Handoff| Synthesizer
-    Synthesizer -->|5. Structured Markdown Proposal| User
+    JoinGatherer -->|Combined Context Handoff| Synthesizer
+    Synthesizer -->|Structured Markdown Proposal| User
+    BookingHandler -->|Booking Confirmation| User
 ```
 ---
 

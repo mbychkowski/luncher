@@ -19,9 +19,9 @@ Initiate a `/grill-me` session, then enter the following prompt and answer any q
 In the `agents` folder, create a new ADK agent named `cater_agent`. Its purpose is to provide catering menu options to serve at a lunch meeting.
 
 Integrate the cater_agent with other agents as follows:
-- when the `parallel_info_gatherer` agent invokes `strategy_agent` and `scheduling_agent`, also invoke `cater_agent` in parallel
-- then pass the menu suggestions provided by cater_agent to parallel_info_gatherer, to synthesize into a proposal
-- when `propose_lunch` is invoked, include a widget to select from the menu suggestions provided by `cater_agent`
+- when `luncher_agent` agent invokes `strategy_agent` and `scheduling_agent`, also invoke `cater_agent` in parallel
+- then, when to synthesizing a proposal, include data from `cater_agent`
+- when `propose_lunch` is invoked, include the menu suggestions provided by `cater_agent`
 - when the user submits their choices, save the catering menu along with the user's other selections
 
 For the initial version, DO NOT implement any actual retrieval of menu items. Instead, always return a the following mock menu suggestions:
@@ -36,7 +36,7 @@ For the initial version, DO NOT implement any actual retrieval of menu items. In
 Enter the following command to start the agents locally:
 
 ```
-Start all the agents in `/agents/` locally, with hot reloading enabled. If any are already running, stop them and re-start them to reflect the most recent changes.
+Kill any processes on ports 8080-8083, then start all the agents in `/agents/` locally.
 ```
 
 ### 1.3. Validate local agent
@@ -109,7 +109,7 @@ Update `propose_lunch` and associated methods in other agents to use the dynamic
 
 ### 3.3. Test local agent
 
-When the implementation is complete, visit http://localhost:8080/dev-ui/?app=luncher_agent and enter a prompt, like `plan a lunch meeting for tuesday`. Verify that the application continues to function, and that catering options are now dynamically generated
+When the implementation is complete, visit http://localhost:8080/dev-ui/?app=app and enter a prompt, like `plan a lunch meeting for tuesday`. Verify that the application continues to function, and that catering options are now dynamically generated
 
 ### 3.4. Redeploy
 

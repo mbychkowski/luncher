@@ -58,7 +58,7 @@ Alternatively, you can run the deployment commands directly:
 source .env
 
 BASE_ENV="GOOGLE_GENAI_MODEL=${GOOGLE_GENAI_MODEL},GOOGLE_GENAI_LOCATION=${GOOGLE_GENAI_LOCATION},GOOGLE_CLOUD_PROJECT_ID=${GOOGLE_CLOUD_PROJECT_ID},GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION}"
-AGENT_SETTINGS_ENV="GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY=true,OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=EVENT_ONLY"
+AGENT_SETTINGS_ENV="GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY=true,OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=EVENT_ONLY,OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental"
 
 # 1. Deploy cater_agent to Agent Runtime
 uv --directory agents/cater_agent run agents-cli deploy \
@@ -291,48 +291,51 @@ Or manually inspect and compare runs:
 
 ### 5.4. Cloud evaluation and monitoring on Gemini Enterprise Agent Platform (GEAP)
 
-For deployed agents on Agent Runtime, you can run server-side evaluations and track performance dashboards directly in Google Cloud.
+For deployed agents on Agent Runtime, you can evaluate live conversation sessions, benchmark experiments, and define evaluation criteria directly in the **Google Cloud Console > Agent Platform > Evaluation** dashboard.
 
-#### 5.4.1. Push server-side evaluation to GEAP (`eval submit`)
+The **Evaluation** tab is divided into three core views:
 
-Submit an evaluation dataset directly to the Agent Platform Evaluation Service to run against your deployed Reasoning Engine or Cloud Run endpoint.
-
-You can prompt Antigravity to submit and track the cloud evaluation:
-
-```
-Submit a cloud evaluation for deployed cater_agent:
-1. Locate the deployed cater_agent Reasoning Engine resource name in GCP (project `$GOOGLE_CLOUD_PROJECT_ID`, location `$GOOGLE_CLOUD_LOCATION`).
-2. Ensure the destination Cloud Storage bucket `gs://${GOOGLE_CLOUD_PROJECT_ID}-eval-results` exists.
-3. Submit `tests/eval/datasets/catering-dataset.json` using `agents-cli eval submit` to run server-side evaluation against the deployed agent.
-4. Retrieve and report the evaluation run ID and link to the Google Cloud Console evaluation dashboard.
+```mermaid
+graph TD
+    EvalTab["Google Cloud Console: Evaluation"]
+    EvalTab --> OM["1. Online Monitoring<br>(Live traffic evaluation & drift alerts)"]
+    EvalTab --> Exp["2. Experiments<br>(Batch benchmark runs & version comparisons)"]
+    EvalTab --> Met["3. Metrics<br>(Pre-built & custom LLM-as-judge rubrics)"]
 ```
 
-Alternatively, you can execute the commands directly:
+#### 5.4.1. Online Monitoring (Evaluating Live Traffic)
 
-```bash
-# 1. Export variables and ensure the destination bucket exists
-source .env
-export CATER_AGENT_REASONING_ENGINE_ID="<your-reasoning-engine-id>"
-gcloud storage buckets create "gs://${GOOGLE_CLOUD_PROJECT_ID}-eval-results" \
-  --project="${GOOGLE_CLOUD_PROJECT_ID}" \
-  --location="${GOOGLE_CLOUD_LOCATION}" \
-  --continue-on-error
+With prompt/response logging enabled (`OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=EVENT_ONLY` and `GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY=true`), live interactions with your deployed agent are evaluated continuously:
 
-# 2. Submit cloud-side evaluation run
-uv --directory agents/cater_agent run agents-cli eval submit \
-  --dataset tests/eval/datasets/catering-dataset.json \
-  --resource-name "projects/${GOOGLE_CLOUD_PROJECT_ID}/locations/${GOOGLE_CLOUD_LOCATION}/reasoningEngines/${CATER_AGENT_REASONING_ENGINE_ID}" \
-  --dest "gs://${GOOGLE_CLOUD_PROJECT_ID}-eval-results/"
+1. **Navigate:** Open **[Google Cloud Console > Agent Platform > Evaluation > Online Monitoring](https://console.cloud.google.com/vertex-ai/evaluation/online-monitoring)**.
+2. **Configure Monitoring Job:** Select your deployed agent (`cater-agent` or `luncher-agent`) and configure sample rate (e.g., 100% in development/testing, 5-10% in production).
+3. **Inspect Real-Time Scores:** Monitor time-series score distributions, pass rates, and latency for live user sessions.
+4. **Drill Down into Sessions:** Click on failing turns to inspect judge rationales and exact conversation payloads.
 
-# 3. Poll and view results from the cloud run
-uv --directory agents/cater_agent run agents-cli eval results --run-id <run-resource-name>
-```
+#### 5.4.2. Experiments (Batch Benchmarks & Model Comparisons)
 
-#### 5.4.2. View in Google Cloud Console
+Use the **Experiments** tab to compare different model iterations, prompts, or tool configurations against standard test datasets:
 
-1. Navigate to the **Google Cloud Console > Agent Platform > Agents > Evaluation**.
-2. Select **Evaluation Runs** to view radar charts, pass rates, score distributions, and judge rationales for each deployed agent version.
-3. In **BigQuery / Cloud Trace**, inspect live conversation traces from production traffic and export failing interactions to synthesize new evaluation cases with `agents-cli eval dataset synthesize`.
+1. **Navigate:** Open **[Google Cloud Console > Agent Platform > Evaluation > Experiments](https://console.cloud.google.com/vertex-ai/evaluation/experiments)**.
+2. **Create / Inspect Experiment:** View side-by-side radar charts, pass rates, and metric comparisons across agent revisions.
+3. **Analyze Score Diffs:** Compare candidate performance against your baseline to certify zero regressions before publishing.
+
+#### 5.4.3. Metrics (Evaluation Criteria Library)
+
+The **Metrics** tab hosts the rubrics and scoring logic used by both Online Monitoring and Experiments:
+
+1. **Navigate:** Open **[Google Cloud Console > Agent Platform > Evaluation > Metrics](https://console.cloud.google.com/vertex-ai/evaluation/metrics)**.
+2. **Prebuilt Evaluators:** View standard GEAP metrics such as:
+   - **Response Quality & Coherence**
+   - **Groundedness & Hallucination Detection**
+   - **Safety & Policy Adherence**
+   - **Tool Use & Parameter Accuracy**
+3. **Custom Evaluators:** Define domain-specific rubrics (such as our local `dietary_filtering` rule) to enforce organization-specific constraints.
+
+#### 5.4.4. Live Distributed Tracing & Closing the Quality Flywheel
+
+1. **Cloud Trace Explorer:** Navigate to **[Google Cloud Console > Trace > Trace explorer](https://console.cloud.google.com/traces/explorer)** to inspect end-to-end request latency across A2A sub-agents (`luncher_agent` ➔ `cater_agent`) and BigQuery MCP queries.
+2. **Closing the Flywheel:** When an anomaly is detected in **Online Monitoring** or **Cloud Trace**, export the interaction into [`tests/eval/datasets/catering-dataset.json`](file:///home/user/Code/luncher/agents/cater_agent/tests/eval/datasets/catering-dataset.json) to expand local regression test coverage.
 
 ## Step 6. (optional). Learn from experience
 

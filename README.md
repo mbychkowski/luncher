@@ -101,8 +101,11 @@ See: [Adding the catering agent](docs/4_cater_agent.md)
 ### 5. ✨ Registering to Gemini Enterprise
 See: [Registering to Gemini Enterprise](docs/5_ge.md)
 
-### 6. 🧹 Cleanup
-See: [Cleanup](docs/6_cleanup.md)
+### 6. 🛡️ Enterprise Hardening (Agent Gateway, Model Armor & Agent Registry)
+See: [Enterprise Hardening](docs/6_gateway_registry.md)
+
+### 7. 🧹 Cleanup
+See: [Cleanup](docs/7_cleanup.md)
 
 ---
 

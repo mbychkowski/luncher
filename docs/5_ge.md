@@ -223,5 +223,5 @@ In the **Hub project's** Cloud Console:
 
 ---
 
-| [⬅️ Previous: 4. Extending Luncher with a catering agent](4_cater_agent.md) | [📚 Getting Started](../README.md#getting-started) | [Next: 6. Cleanup ➡️](6_cleanup.md) |
+| [⬅️ Previous: 4. Extending Luncher with a catering agent](4_cater_agent.md) | [📚 Getting Started](../README.md#getting-started) | [Next: 6. Enterprise Hardening ➡️](6_gateway_registry.md) |
 | :--- | :---: | ---: |

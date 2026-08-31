@@ -87,6 +87,8 @@ RE_ROLES=(
     "aiplatform.user"                        # models, sessions, Memory Bank
     "aiplatform.reasoningEngineServiceAgent" # Agent Runtime operational role
     "bigquery.admin"                         # catering dataset queries
+    "networkservices.admin"                  # Agent Gateway usage and routing
+    "agentregistry.user"                     # Agent Registry registration and lookups
 )
 
 for role in "${RE_ROLES[@]}"; do
@@ -141,6 +143,8 @@ fi
 DE_SA="service-${PROJECT_NUMBER}@gcp-sa-discoveryengine.iam.gserviceaccount.com"
 echo "Binding roles to Discovery Engine SA: ${DE_SA}..."
 bind "serviceAccount:${DE_SA}" "aiplatform.user"
+bind "serviceAccount:${DE_SA}" "networkservices.viewer"
+bind "serviceAccount:${DE_SA}" "agentregistry.user"
 
 if [ "$FAILED" -gt 0 ]; then
   echo "IAM setup incomplete: ${FAILED} binding(s) failed. Deploys will 403 until fixed."

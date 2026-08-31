@@ -64,6 +64,7 @@ Run the following shell scripts in order from the repository root.
   | `compute.googleapis.com` | Provides the default compute service account Cloud Run runs as |
   | `bigquery.googleapis.com` | The `catering` dataset queried over MCP by `sched_agent` |
   | `apphub.googleapis.com` | Backs the Dashboard tab on an Agent Platform deployment |
+  | `discoveryengine.googleapis.com` | Gemini Enterprise Discovery Engine & agent publishing |
   | `iam.googleapis.com` | Identity and Access Management service |
   | `cloudresourcemanager.googleapis.com` | GCP Project metadata & policy management |
   | `storage.googleapis.com` | Google Cloud Storage buckets for PDF documents and artifacts |
@@ -109,6 +110,10 @@ Run the following shell scripts in order from the repository root.
   - **`roles/serviceusage.serviceUsageConsumer`** (*Service Usage Consumer*): Allows agents deployed with `--agent-identity` to consume GCP APIs.
   - **`roles/storage.objectViewer`** (*Storage Object Viewer*): Read access to strategy PDFs and other artifacts in Cloud Storage.
   - **`roles/bigquery.admin`** (*BigQuery Admin*): Query and manage BigQuery datasets via MCP when running on Agent Runtime.
+
+  ##### 6. Discovery Engine Service Account (Gemini Enterprise Invocations)
+  `service-${PROJECT_NUMBER}@gcp-sa-discoveryengine.iam.gserviceaccount.com`
+  - **`roles/aiplatform.user`** (*Agent Platform User*): Allows Gemini Enterprise to invoke deployed Reasoning Engines via Vertex AI streaming query API.
 
   > **Note on Organization ID (`ORG_ID`):**
   > - `03-setup-iam.sh` attempts to resolve `ORG_ID` automatically via `gcloud projects get-ancestors`.

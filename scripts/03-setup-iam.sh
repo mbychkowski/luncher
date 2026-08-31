@@ -38,9 +38,11 @@ PROJECT_NUMBER=$(gcloud projects describe "$GOOGLE_CLOUD_PROJECT_ID" --format="v
 FAILED=0
 DEFERRED=0
 
-# The aiplatform service agent is created lazily on first API use. Creating it up
-# front means the bindings below have something to attach to.
+# The aiplatform and discoveryengine service agents are created lazily on first API use.
+# Creating them up front means the bindings below have something to attach to.
 gcloud beta services identity create --service=aiplatform.googleapis.com \
+  --project="$GOOGLE_CLOUD_PROJECT_ID" >/dev/null 2>&1 || true
+gcloud beta services identity create --service=discoveryengine.googleapis.com \
   --project="$GOOGLE_CLOUD_PROJECT_ID" >/dev/null 2>&1 || true
 
 # A refused grant must be visible here; unreported it surfaces later as a 403.
@@ -134,6 +136,11 @@ else
   echo "Notice: Could not automatically resolve Organization ID for ${GOOGLE_CLOUD_PROJECT_ID}."
   echo "        If your project belongs to a GCP Organization, you can re-run with: ORG_ID=<org_id> ./scripts/03-setup-iam.sh"
 fi
+
+# 6. Discovery Engine Service Account (for Gemini Enterprise -> Agent Runtime / Reasoning Engine invocations)
+DE_SA="service-${PROJECT_NUMBER}@gcp-sa-discoveryengine.iam.gserviceaccount.com"
+echo "Binding roles to Discovery Engine SA: ${DE_SA}..."
+bind "serviceAccount:${DE_SA}" "aiplatform.user"
 
 if [ "$FAILED" -gt 0 ]; then
   echo "IAM setup incomplete: ${FAILED} binding(s) failed. Deploys will 403 until fixed."

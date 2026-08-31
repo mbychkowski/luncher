@@ -330,7 +330,7 @@ uv --directory agents/cater_agent run agents-cli eval results --run-id <run-reso
 
 #### 5.4.2. View in Google Cloud Console
 
-1. Navigate to the **Google Cloud Console > Vertex AI > Agent Platform** (or **Vertex AI > Evaluation**).
+1. Navigate to the **Google Cloud Console > Agent Platform > Agents > Evaluation**.
 2. Select **Evaluation Runs** to view radar charts, pass rates, score distributions, and judge rationales for each deployed agent version.
 3. In **BigQuery / Cloud Trace**, inspect live conversation traces from production traffic and export failing interactions to synthesize new evaluation cases with `agents-cli eval dataset synthesize`.
 

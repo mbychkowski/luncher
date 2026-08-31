@@ -305,7 +305,7 @@ graph TD
 
 #### 5.4.1. Online Monitoring (Evaluating Live Traffic)
 
-With prompt/response logging enabled (`OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=EVENT_ONLY` and `GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY=true`), live interactions with your deployed agent are evaluated continuously:
+With prompt/response logging enabled (`OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true` and `GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY=true`), live interactions with your deployed agent are evaluated continuously:
 
 1. **Navigate:** Open **[Google Cloud Console > Agent Platform > Evaluation > Online Monitoring](https://console.cloud.google.com/vertex-ai/evaluation/online-monitoring)**.
 2. **Configure Monitoring Job:** Select your deployed agent (`cater-agent` or `luncher-agent`) and configure sample rate (e.g., 100% in development/testing, 5-10% in production).
